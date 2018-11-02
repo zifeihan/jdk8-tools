@@ -69,22 +69,27 @@ import static com.sun.tools.javac.main.Option.*;
 import static com.sun.tools.javac.util.JCDiagnostic.DiagnosticFlag.*;
 
 
-/** This class could be the main entry point for GJC when GJC is used as a
- *  component in a larger software system. It provides operations to
- *  construct a new compiler, and to run a new compiler on a set of source
- *  files.
+/**
+ * This class could be the main entry point for GJC when GJC is used as a
+ * component in a larger software system. It provides operations to
+ * construct a new compiler, and to run a new compiler on a set of source
+ * files.
  *
- *  <p><b>This is NOT part of any supported API.
- *  If you write code that depends on this, you do so at your own risk.
- *  This code and its internal interfaces are subject to change or
- *  deletion without notice.</b>
+ * <p><b>This is NOT part of any supported API.
+ * If you write code that depends on this, you do so at your own risk.
+ * This code and its internal interfaces are subject to change or
+ * deletion without notice.</b>
  */
 public class JavaCompiler {
-    /** The context key for the compiler. */
+    /**
+     * The context key for the compiler.
+     */
     protected static final Context.Key<JavaCompiler> compilerKey =
-        new Context.Key<JavaCompiler>();
+            new Context.Key<JavaCompiler>();
 
-    /** Get the JavaCompiler instance for this context. */
+    /**
+     * Get the JavaCompiler instance for this context.
+     */
     public static JavaCompiler instance(Context context) {
         JavaCompiler instance = context.get(compilerKey);
         if (instance == null)
@@ -92,13 +97,15 @@ public class JavaCompiler {
         return instance;
     }
 
-    /** The current version number as a string.
+    /**
+     * The current version number as a string.
      */
     public static String version() {
         return version("release");  // mm.nn.oo[-milestone]
     }
 
-    /** The current full version number as a string.
+    /**
+     * The current full version number as a string.
      */
     public static String fullVersion() {
         return version("full"); // mm.mm.oo[-milestone]-build
@@ -117,8 +124,7 @@ public class JavaCompiler {
         }
         try {
             return versionRB.getString(key);
-        }
-        catch (MissingResourceException e) {
+        } catch (MissingResourceException e) {
             return Log.getLocalizedString("version.not.available");
         }
     }
@@ -192,11 +198,17 @@ public class JavaCompiler {
     private static final CompilePolicy DEFAULT_COMPILE_POLICY = CompilePolicy.BY_TODO;
 
     protected static enum ImplicitSourcePolicy {
-        /** Don't generate or process implicitly read source files. */
+        /**
+         * Don't generate or process implicitly read source files.
+         */
         NONE,
-        /** Generate classes for implicitly read source files. */
+        /**
+         * Generate classes for implicitly read source files.
+         */
         CLASS,
-        /** Like CLASS, but generate warnings if annotation processing occurs */
+        /**
+         * Like CLASS, but generate warnings if annotation processing occurs
+         */
         UNSET;
 
         static ImplicitSourcePolicy decode(String option) {
@@ -211,91 +223,113 @@ public class JavaCompiler {
         }
     }
 
-    /** The log to be used for error reporting.
+    /**
+     * The log to be used for error reporting.
      */
     public Log log;
 
-    /** Factory for creating diagnostic objects
+    /**
+     * Factory for creating diagnostic objects
      */
     JCDiagnostic.Factory diagFactory;
 
-    /** The tree factory module.
+    /**
+     * The tree factory module.
      */
     protected TreeMaker make;
 
-    /** The class reader.
+    /**
+     * The class reader.
      */
     protected ClassReader reader;
 
-    /** The class writer.
+    /**
+     * The class writer.
      */
     protected ClassWriter writer;
 
-    /** The native header writer.
+    /**
+     * The native header writer.
      */
     protected JNIWriter jniWriter;
 
-    /** The module for the symbol table entry phases.
+    /**
+     * The module for the symbol table entry phases.
      */
     protected Enter enter;
 
-    /** The symbol table.
+    /**
+     * The symbol table.
      */
     protected Symtab syms;
 
-    /** The language version.
+    /**
+     * The language version.
      */
     protected Source source;
 
-    /** The module for code generation.
+    /**
+     * The module for code generation.
      */
     protected Gen gen;
 
-    /** The name table.
+    /**
+     * The name table.
      */
     protected Names names;
 
-    /** The attributor.
+    /**
+     * The attributor.
      */
     protected Attr attr;
 
-    /** The attributor.
+    /**
+     * The attributor.
      */
     protected Check chk;
 
-    /** The flow analyzer.
+    /**
+     * The flow analyzer.
      */
     protected Flow flow;
 
-    /** The type eraser.
+    /**
+     * The type eraser.
      */
     protected TransTypes transTypes;
 
-    /** The syntactic sugar desweetener.
+    /**
+     * The syntactic sugar desweetener.
      */
     protected Lower lower;
 
-    /** The annotation annotator.
+    /**
+     * The annotation annotator.
      */
     protected Annotate annotate;
 
-    /** Force a completion failure on this name
+    /**
+     * Force a completion failure on this name
      */
     protected final Name completionFailureName;
 
-    /** Type utilities.
+    /**
+     * Type utilities.
      */
     protected Types types;
 
-    /** Access to file objects.
+    /**
+     * Access to file objects.
      */
     protected JavaFileManager fileManager;
 
-    /** Factory for parsers.
+    /**
+     * Factory for parsers.
      */
     protected ParserFactory parserFactory;
 
-    /** Broadcasting listener for progress events
+    /**
+     * Broadcasting listener for progress events
      */
     protected MultiTaskListener taskListener;
 
@@ -335,7 +369,8 @@ public class JavaCompiler {
 
     protected CompileStates compileStates;
 
-    /** Construct a new compiler using a shared context.
+    /**
+     * Construct a new compiler using a shared context.
      */
     public JavaCompiler(Context context) {
         this.context = context;
@@ -384,20 +419,20 @@ public class JavaCompiler {
 
         options = Options.instance(context);
 
-        verbose       = options.isSet(VERBOSE);
-        sourceOutput  = options.isSet(PRINTSOURCE); // used to be -s
-        stubOutput    = options.isSet("-stubs");
-        relax         = options.isSet("-relax");
-        printFlat     = options.isSet("-printflat");
+        verbose = options.isSet(VERBOSE);
+        sourceOutput = options.isSet(PRINTSOURCE); // used to be -s
+        stubOutput = options.isSet("-stubs");
+        relax = options.isSet("-relax");
+        printFlat = options.isSet("-printflat");
         attrParseOnly = options.isSet("-attrparseonly");
-        encoding      = options.get(ENCODING);
+        encoding = options.get(ENCODING);
         lineDebugInfo = options.isUnset(G_CUSTOM) ||
-                        options.isSet(G_CUSTOM, "lines");
-        genEndPos     = options.isSet(XJCOV) ||
-                        context.get(DiagnosticListener.class) != null;
-        devVerbose    = options.isSet("dev");
-        processPcks   = options.isSet("process.packages");
-        werror        = options.isSet(WERROR);
+                options.isSet(G_CUSTOM, "lines");
+        genEndPos = options.isSet(XJCOV) ||
+                context.get(DiagnosticListener.class) != null;
+        devVerbose = options.isSet("dev");
+        processPcks = options.isSet("process.packages");
+        werror = options.isSet(WERROR);
 
         if (source.compareTo(Source.DEFAULT) < 0) {
             if (options.isUnset(XLINT_CUSTOM, "-" + LintCategory.OPTIONS.option)) {
@@ -420,20 +455,20 @@ public class JavaCompiler {
         implicitSourcePolicy = ImplicitSourcePolicy.decode(options.get("-implicit"));
 
         completionFailureName =
-            options.isSet("failcomplete")
-            ? names.fromString(options.get("failcomplete"))
-            : null;
+                options.isSet("failcomplete")
+                        ? names.fromString(options.get("failcomplete"))
+                        : null;
 
         shouldStopPolicyIfError =
-            options.isSet("shouldStopPolicy") // backwards compatible
-            ? CompileState.valueOf(options.get("shouldStopPolicy"))
-            : options.isSet("shouldStopPolicyIfError")
-            ? CompileState.valueOf(options.get("shouldStopPolicyIfError"))
-            : CompileState.INIT;
+                options.isSet("shouldStopPolicy") // backwards compatible
+                        ? CompileState.valueOf(options.get("shouldStopPolicy"))
+                        : options.isSet("shouldStopPolicyIfError")
+                        ? CompileState.valueOf(options.get("shouldStopPolicyIfError"))
+                        : CompileState.INIT;
         shouldStopPolicyIfNoError =
-            options.isSet("shouldStopPolicyIfNoError")
-            ? CompileState.valueOf(options.get("shouldStopPolicyIfNoError"))
-            : CompileState.GENERATE;
+                options.isSet("shouldStopPolicyIfNoError")
+                        ? CompileState.valueOf(options.get("shouldStopPolicyIfNoError"))
+                        : CompileState.GENERATE;
 
         if (options.isUnset("oldDiags"))
             log.setDiagnosticFormatter(RichDiagnosticFormatter.instance(context));
@@ -462,55 +497,68 @@ public class JavaCompiler {
     /* Switches:
      */
 
-    /** Verbose output.
+    /**
+     * Verbose output.
      */
     public boolean verbose;
 
-    /** Emit plain Java source files rather than class files.
+    /**
+     * Emit plain Java source files rather than class files.
      */
     public boolean sourceOutput;
 
-    /** Emit stub source files rather than class files.
+    /**
+     * Emit stub source files rather than class files.
      */
     public boolean stubOutput;
 
-    /** Generate attributed parse tree only.
+    /**
+     * Generate attributed parse tree only.
      */
     public boolean attrParseOnly;
 
-    /** Switch: relax some constraints for producing the jsr14 prototype.
+    /**
+     * Switch: relax some constraints for producing the jsr14 prototype.
      */
     boolean relax;
 
-    /** Debug switch: Emit Java sources after inner class flattening.
+    /**
+     * Debug switch: Emit Java sources after inner class flattening.
      */
     public boolean printFlat;
 
-    /** The encoding to be used for source input.
+    /**
+     * The encoding to be used for source input.
      */
     public String encoding;
 
-    /** Generate code with the LineNumberTable attribute for debugging
+    /**
+     * Generate code with the LineNumberTable attribute for debugging
      */
     public boolean lineDebugInfo;
 
-    /** Switch: should we store the ending positions?
+    /**
+     * Switch: should we store the ending positions?
      */
     public boolean genEndPos;
 
-    /** Switch: should we debug ignored exceptions
+    /**
+     * Switch: should we debug ignored exceptions
      */
     protected boolean devVerbose;
 
-    /** Switch: should we (annotation) process packages as well
+    /**
+     * Switch: should we (annotation) process packages as well
      */
     protected boolean processPcks;
 
-    /** Switch: treat warnings as errors
+    /**
+     * Switch: treat warnings as errors
      */
     protected boolean werror;
 
-    /** Switch: is annotation processing requested explicitly via
+    /**
+     * Switch: is annotation processing requested explicitly via
      * CompilationTask.setProcessors?
      */
     protected boolean explicitAnnotationProcessingRequested = false;
@@ -544,28 +592,32 @@ public class JavaCompiler {
      */
     public CompileState shouldStopPolicyIfNoError;
 
-    /** A queue of all as yet unattributed classes.
+    /**
+     * A queue of all as yet unattributed classes.
      */
     public Todo todo;
 
-    /** A list of items to be closed when the compilation is complete.
+    /**
+     * A list of items to be closed when the compilation is complete.
      */
     public List<Closeable> closeables = List.nil();
 
-    /** The set of currently compiled inputfiles, needed to ensure
-     *  we don't accidentally overwrite an input file when -s is set.
-     *  initialized by `compile'.
+    /**
+     * The set of currently compiled inputfiles, needed to ensure
+     * we don't accidentally overwrite an input file when -s is set.
+     * initialized by `compile'.
      */
     protected Set<JavaFileObject> inputFiles = new HashSet<JavaFileObject>();
 
     protected boolean shouldStop(CompileState cs) {
         CompileState shouldStopPolicy = (errorCount() > 0 || unrecoverableError())
-            ? shouldStopPolicyIfError
-            : shouldStopPolicyIfNoError;
+                ? shouldStopPolicyIfError
+                : shouldStopPolicyIfNoError;
         return cs.isAfter(shouldStopPolicy);
     }
 
-    /** The number of errors reported so far.
+    /**
+     * The number of errors reported so far.
      */
     public int errorCount() {
         if (delegateCompiler != null && delegateCompiler != this)
@@ -586,7 +638,8 @@ public class JavaCompiler {
         return shouldStop(cs) ? List.<T>nil() : list;
     }
 
-    /** The number of warnings reported so far.
+    /**
+     * The number of warnings reported so far.
      */
     public int warningCount() {
         if (delegateCompiler != null && delegateCompiler != this)
@@ -595,9 +648,11 @@ public class JavaCompiler {
             return log.nwarnings;
     }
 
-    /** Try to open input stream with given name.
-     *  Report an error if this fails.
-     *  @param filename   The file name of the input stream to be opened.
+    /**
+     * Try to open input stream with given name.
+     * Report an error if this fails.
+     *
+     * @param filename The file name of the input stream to be opened.
      */
     public CharSequence readSource(JavaFileObject filename) {
         try {
@@ -609,14 +664,16 @@ public class JavaCompiler {
         }
     }
 
-    /** Parse contents of input stream.
-     *  @param filename     The name of the file from which input stream comes.
-     *  @param content      The characters to be parsed.
+    /**
+     * Parse contents of input stream.
+     *
+     * @param filename The name of the file from which input stream comes.
+     * @param content  The characters to be parsed.
      */
     protected JCCompilationUnit parse(JavaFileObject filename, CharSequence content) {
         long msec = now();
         JCCompilationUnit tree = make.TopLevel(List.<JCTree.JCAnnotation>nil(),
-                                      null, List.<JCTree>nil());
+                null, List.<JCTree>nil());
         if (content != null) {
             if (verbose) {
                 log.printVerbose("parsing.started", filename);
@@ -643,24 +700,30 @@ public class JavaCompiler {
 
         return tree;
     }
+
     // where
-        public boolean keepComments = false;
-        protected boolean keepComments() {
-            return keepComments || sourceOutput || stubOutput;
-        }
+    public boolean keepComments = false;
+
+    protected boolean keepComments() {
+        return keepComments || sourceOutput || stubOutput;
+    }
 
 
-    /** Parse contents of file.
-     *  @param filename     The name of the file to be parsed.
+    /**
+     * Parse contents of file.
+     *
+     * @param filename The name of the file to be parsed.
      */
     @Deprecated
     public JCTree.JCCompilationUnit parse(String filename) {
-        JavacFileManager fm = (JavacFileManager)fileManager;
+        JavacFileManager fm = (JavacFileManager) fileManager;
         return parse(fm.getJavaFileObjectsFromStrings(List.of(filename)).iterator().next());
     }
 
-    /** Parse contents of file.
-     *  @param filename     The name of the file to be parsed.
+    /**
+     * Parse contents of file.
+     *
+     * @param filename The name of the file to be parsed.
      */
     public JCTree.JCCompilationUnit parse(JavaFileObject filename) {
         JavaFileObject prev = log.useSource(filename);
@@ -674,9 +737,11 @@ public class JavaCompiler {
         }
     }
 
-    /** Resolve an identifier which may be the binary name of a class or
+    /**
+     * Resolve an identifier which may be the binary name of a class or
      * the Java name of a class or package.
-     * @param name      The name to resolve
+     *
+     * @param name The name to resolve
      */
     public Symbol resolveBinaryNameOrIdent(String name) {
         try {
@@ -687,8 +752,10 @@ public class JavaCompiler {
         }
     }
 
-    /** Resolve an identifier.
-     * @param name      The identifier to resolve
+    /**
+     * Resolve an identifier.
+     *
+     * @param name The identifier to resolve
      */
     public Symbol resolveIdent(String name) {
         if (name.equals(""))
@@ -700,10 +767,10 @@ public class JavaCompiler {
                 if (!SourceVersion.isIdentifier(s)) // TODO: check for keywords
                     return syms.errSymbol;
                 tree = (tree == null) ? make.Ident(names.fromString(s))
-                                      : make.Select(tree, names.fromString(s));
+                        : make.Select(tree, names.fromString(s));
             }
             JCCompilationUnit toplevel =
-                make.TopLevel(List.<JCTree.JCAnnotation>nil(), null, List.<JCTree>nil());
+                    make.TopLevel(List.<JCTree.JCAnnotation>nil(), null, List.<JCTree>nil());
             toplevel.packge = syms.unnamedPackage;
             return attr.attribIdent(tree, toplevel);
         } finally {
@@ -711,17 +778,19 @@ public class JavaCompiler {
         }
     }
 
-    /** Emit plain Java source for a class.
-     *  @param env    The attribution environment of the outermost class
-     *                containing this class.
-     *  @param cdef   The class definition to be printed.
+    /**
+     * Emit plain Java source for a class.
+     *
+     * @param env  The attribution environment of the outermost class
+     *             containing this class.
+     * @param cdef The class definition to be printed.
      */
     JavaFileObject printSource(Env<AttrContext> env, JCClassDecl cdef) throws IOException {
         JavaFileObject outFile
-            = fileManager.getJavaFileForOutput(CLASS_OUTPUT,
-                                               cdef.sym.flatname.toString(),
-                                               JavaFileObject.Kind.SOURCE,
-                                               null);
+                = fileManager.getJavaFileForOutput(CLASS_OUTPUT,
+                cdef.sym.flatname.toString(),
+                JavaFileObject.Kind.SOURCE,
+                null);
         if (inputFiles.contains(outFile)) {
             log.error(cdef.pos(), "source.cant.overwrite.input.file", outFile);
             return null;
@@ -738,10 +807,12 @@ public class JavaCompiler {
         }
     }
 
-    /** Generate code and emit a class file for a given class
-     *  @param env    The attribution environment of the outermost class
-     *                containing this class.
-     *  @param cdef   The class definition from which code is generated.
+    /**
+     * Generate code and emit a class file for a given class
+     *
+     * @param env  The attribution environment of the outermost class
+     *             containing this class.
+     * @param cdef The class definition from which code is generated.
      */
     JavaFileObject genCode(Env<AttrContext> env, JCClassDecl cdef) throws IOException {
         try {
@@ -751,16 +822,18 @@ public class JavaCompiler {
             log.error(cdef.pos(), "limit.pool");
         } catch (ClassWriter.StringOverflow ex) {
             log.error(cdef.pos(), "limit.string.overflow",
-                      ex.value.substring(0, 20));
+                    ex.value.substring(0, 20));
         } catch (CompletionFailure ex) {
             chk.completionError(cdef.pos(), ex);
         }
         return null;
     }
 
-    /** Complete compiling a source file that has been accessed
-     *  by the class file reader.
-     *  @param c          The class the source file of which needs to be compiled.
+    /**
+     * Complete compiling a source file that has been accessed
+     * by the class file reader.
+     *
+     * @param c The class the source file of which needs to be compiled.
      */
     public void complete(ClassSymbol c) throws CompletionFailure {
 //      System.err.println("completing " + c);//DEBUG
@@ -794,19 +867,19 @@ public class JavaCompiler {
 
         if (enter.getEnv(c) == null) {
             boolean isPkgInfo =
-                tree.sourcefile.isNameCompatible("package-info",
-                                                 JavaFileObject.Kind.SOURCE);
+                    tree.sourcefile.isNameCompatible("package-info",
+                            JavaFileObject.Kind.SOURCE);
             if (isPkgInfo) {
                 if (enter.getEnv(tree.packge) == null) {
                     JCDiagnostic diag =
-                        diagFactory.fragment("file.does.not.contain.package",
-                                                 c.location());
+                            diagFactory.fragment("file.does.not.contain.package",
+                                    c.location());
                     throw reader.new BadClassFile(c, filename, diag);
                 }
             } else {
                 JCDiagnostic diag =
                         diagFactory.fragment("file.doesnt.contain.class",
-                                            c.getQualifiedName());
+                                c.getQualifiedName());
                 throw reader.new BadClassFile(c, filename, diag);
             }
         }
@@ -814,13 +887,15 @@ public class JavaCompiler {
         implicitSourceFilesRead = true;
     }
 
-    /** Track when the JavaCompiler has been used to compile something. */
+    /**
+     * Track when the JavaCompiler has been used to compile something.
+     */
     private boolean hasBeenUsed = false;
     private long start_msec = 0;
     public long elapsed_msec = 0;
 
     public void compile(List<JavaFileObject> sourceFileObject)
-        throws Throwable {
+            throws Throwable {
         compile(sourceFileObject, List.<String>nil(), null);
     }
 
@@ -828,14 +903,13 @@ public class JavaCompiler {
      * Main method: compile a list of files, return all compiled classes
      *
      * @param sourceFileObjects file objects to be compiled
-     * @param classnames class names to process for annotations
-     * @param processors user provided annotation processors to bypass
-     * discovery, {@code null} means that no processors were provided
+     * @param classnames        class names to process for annotations
+     * @param processors        user provided annotation processors to bypass
+     *                          discovery, {@code null} means that no processors were provided
      */
     public void compile(List<JavaFileObject> sourceFileObjects,
                         List<String> classnames,
-                        Iterable<? extends Processor> processors)
-    {
+                        Iterable<? extends Processor> processors) {
         if (processors != null && processors.iterator().hasNext())
             explicitAnnotationProcessingRequested = true;
         // as a JavaCompiler can only be used once, throw an exception if
@@ -856,9 +930,9 @@ public class JavaCompiler {
 
             // These method calls must be chained to avoid memory leaks
             delegateCompiler =
-                processAnnotations(
-                    enterTrees(stopIfError(CompileState.PARSE, parseFiles(sourceFileObjects))),
-                    classnames);
+                    processAnnotations(
+                            enterTrees(stopIfError(CompileState.PARSE, parseFiles(sourceFileObjects))),
+                            classnames);
 
             delegateCompiler.compile2();
             delegateCompiler.close();
@@ -879,19 +953,19 @@ public class JavaCompiler {
     private void compile2() {
         try {
             switch (compilePolicy) {
-            case ATTR_ONLY:
-                attribute(todo);
-                break;
+                case ATTR_ONLY:
+                    attribute(todo);
+                    break;
 
-            case CHECK_ONLY:
-                flow(attribute(todo));
-                break;
+                case CHECK_ONLY:
+                    flow(attribute(todo));
+                    break;
 
-            case SIMPLE:
-                generate(desugar(flow(attribute(todo))));
-                break;
+                case SIMPLE:
+                    generate(desugar(flow(attribute(todo))));
+                    break;
 
-            case BY_FILE: {
+                case BY_FILE: {
                     Queue<Queue<Env<AttrContext>>> q = todo.groupByFile();
                     while (!q.isEmpty() && !shouldStop(CompileState.ATTR)) {
                         generate(desugar(flow(attribute(q.remove()))));
@@ -899,13 +973,13 @@ public class JavaCompiler {
                 }
                 break;
 
-            case BY_TODO:
-                while (!todo.isEmpty())
-                    generate(desugar(flow(attribute(todo.remove()))));
-                break;
+                case BY_TODO:
+                    while (!todo.isEmpty())
+                        generate(desugar(flow(attribute(todo.remove()))));
+                    break;
 
-            default:
-                Assert.error("unknown compile policy");
+                default:
+                    Assert.error("unknown compile policy");
             }
         } catch (Abort ex) {
             if (devVerbose)
@@ -940,9 +1014,9 @@ public class JavaCompiler {
     /**
      * Parses a list of files.
      */
-   public List<JCCompilationUnit> parseFiles(Iterable<JavaFileObject> fileObjects) {
-       if (shouldStop(CompileState.PARSE))
-           return List.nil();
+    public List<JCCompilationUnit> parseFiles(Iterable<JavaFileObject> fileObjects) {
+        if (shouldStop(CompileState.PARSE))
+            return List.nil();
 
         //parse all files
         ListBuffer<JCCompilationUnit> trees = new ListBuffer<>();
@@ -963,8 +1037,8 @@ public class JavaCompiler {
      * Also stores a list of all top level classes in rootClasses.
      */
     public List<JCCompilationUnit> enterTreesIfNeeded(List<JCCompilationUnit> roots) {
-       if (shouldStop(CompileState.ATTR))
-           return List.nil();
+        if (shouldStop(CompileState.ATTR))
+            return List.nil();
         return enterTrees(roots);
     }
 
@@ -976,7 +1050,7 @@ public class JavaCompiler {
     public List<JCCompilationUnit> enterTrees(List<JCCompilationUnit> roots) {
         //enter symbols for all files
         if (!taskListener.isEmpty()) {
-            for (JCCompilationUnit unit: roots) {
+            for (JCCompilationUnit unit : roots) {
                 TaskEvent e = new TaskEvent(TaskEvent.Kind.ENTER, unit);
                 taskListener.started(e);
             }
@@ -985,7 +1059,7 @@ public class JavaCompiler {
         enter.main(roots);
 
         if (!taskListener.isEmpty()) {
-            for (JCCompilationUnit unit: roots) {
+            for (JCCompilationUnit unit : roots) {
                 TaskEvent e = new TaskEvent(TaskEvent.Kind.ENTER, unit);
                 taskListener.finished(e);
             }
@@ -1001,7 +1075,7 @@ public class JavaCompiler {
                      defs.nonEmpty();
                      defs = defs.tail) {
                     if (defs.head instanceof JCClassDecl)
-                        cdefs.append((JCClassDecl)defs.head);
+                        cdefs.append((JCClassDecl) defs.head);
                 }
             }
             rootClasses = cdefs.toList();
@@ -1040,7 +1114,7 @@ public class JavaCompiler {
      * the compilation unit.
      *
      * @param processors user provided annotation processors to bypass
-     * discovery, {@code null} means that no processors were provided
+     *                   discovery, {@code null} means that no processors were provided
      */
     public void initProcessAnnotations(Iterable<? extends Processor> processors) {
         // Process annotations if processing is not disabled and there
@@ -1073,6 +1147,7 @@ public class JavaCompiler {
 
     /**
      * Process any annotations found in the specified compilation units.
+     *
      * @param roots a list of compilation units
      * @return an instance of the compiler in which to complete the compilation
      */
@@ -1112,7 +1187,7 @@ public class JavaCompiler {
             // If not processing annotations, classnames must be empty
             if (!classnames.isEmpty()) {
                 log.error("proc.no.explicit.annotation.processing.requested",
-                          classnames);
+                        classnames);
             }
             Assert.checkNull(deferredDiagnosticHandler);
             return this; // continue regular compilation
@@ -1124,11 +1199,11 @@ public class JavaCompiler {
             List<ClassSymbol> classSymbols = List.nil();
             List<PackageSymbol> pckSymbols = List.nil();
             if (!classnames.isEmpty()) {
-                 // Check for explicit request for annotation
-                 // processing
+                // Check for explicit request for annotation
+                // processing
                 if (!explicitAnnotationProcessingRequested()) {
                     log.error("proc.no.explicit.annotation.processing.requested",
-                              classnames);
+                            classnames);
                     deferredDiagnosticHandler.reportDeferredDiagnostics();
                     log.popDiagnosticHandler(deferredDiagnosticHandler);
                     return this; // TODO: Will this halt compilation?
@@ -1137,8 +1212,8 @@ public class JavaCompiler {
                     for (String nameStr : classnames) {
                         Symbol sym = resolveBinaryNameOrIdent(nameStr);
                         if (sym == null ||
-                            (sym.kind == Kinds.PCK && !processPcks) ||
-                            sym.kind == Kinds.ABSENT_TYP) {
+                                (sym.kind == Kinds.PCK && !processPcks) ||
+                                sym.kind == Kinds.ABSENT_TYP) {
                             log.error("proc.cant.find.class", nameStr);
                             errors = true;
                             continue;
@@ -1148,14 +1223,14 @@ public class JavaCompiler {
                                 sym.complete();
                             if (sym.exists()) {
                                 if (sym.kind == Kinds.PCK)
-                                    pckSymbols = pckSymbols.prepend((PackageSymbol)sym);
+                                    pckSymbols = pckSymbols.prepend((PackageSymbol) sym);
                                 else
-                                    classSymbols = classSymbols.prepend((ClassSymbol)sym);
+                                    classSymbols = classSymbols.prepend((ClassSymbol) sym);
                                 continue;
                             }
                             Assert.check(sym.kind == Kinds.PCK);
                             log.warning("proc.package.does.not.exist", nameStr);
-                            pckSymbols = pckSymbols.prepend((PackageSymbol)sym);
+                            pckSymbols = pckSymbols.prepend((PackageSymbol) sym);
                         } catch (CompletionFailure e) {
                             log.error("proc.cant.find.class", nameStr);
                             errors = true;
@@ -1189,7 +1264,7 @@ public class JavaCompiler {
 
     private boolean unrecoverableError() {
         if (deferredDiagnosticHandler != null) {
-            for (JCDiagnostic d: deferredDiagnosticHandler.getDiagnostics()) {
+            for (JCDiagnostic d : deferredDiagnosticHandler.getDiagnostics()) {
                 if (d.getKind() == JCDiagnostic.Kind.ERROR && !d.isFlagSet(RECOVERABLE))
                     return true;
             }
@@ -1199,16 +1274,16 @@ public class JavaCompiler {
 
     boolean explicitAnnotationProcessingRequested() {
         return
-            explicitAnnotationProcessingRequested ||
-            explicitAnnotationProcessingRequested(options);
+                explicitAnnotationProcessingRequested ||
+                        explicitAnnotationProcessingRequested(options);
     }
 
     static boolean explicitAnnotationProcessingRequested(Options options) {
         return
-            options.isSet(PROCESSOR) ||
-            options.isSet(PROCESSORPATH) ||
-            options.isSet(PROC, "only") ||
-            options.isSet(XPRINT);
+                options.isSet(PROCESSOR) ||
+                        options.isSet(PROCESSORPATH) ||
+                        options.isSet(PROC, "only") ||
+                        options.isSet(XPRINT);
     }
 
     /**
@@ -1216,6 +1291,7 @@ public class JavaCompiler {
      * Note that attributing classes may cause additional files to be
      * parsed and entered via the SourceCompleter.
      * Attribution of the entries in the list does not stop if any errors occur.
+     *
      * @returns a list of environments for attributd classes.
      */
     public Queue<Env<AttrContext>> attribute(Queue<Env<AttrContext>> envs) {
@@ -1227,6 +1303,7 @@ public class JavaCompiler {
 
     /**
      * Attribute a parse tree.
+     *
      * @returns the attributed parse tree
      */
     public Env<AttrContext> attribute(Env<AttrContext> env) {
@@ -1244,9 +1321,9 @@ public class JavaCompiler {
         }
 
         JavaFileObject prev = log.useSource(
-                                  env.enclClass.sym.sourcefile != null ?
-                                  env.enclClass.sym.sourcefile :
-                                  env.toplevel.sourcefile);
+                env.enclClass.sym.sourcefile != null ?
+                        env.enclClass.sym.sourcefile :
+                        env.toplevel.sourcefile);
         try {
             attr.attrib(env);
             if (errorCount() > 0 && !shouldStop(CompileState.ATTR)) {
@@ -1261,31 +1338,33 @@ public class JavaCompiler {
                 // then now is a good time to do it.
                 reportPublicApi(env.enclClass.sym);
             }
-        }
-        finally {
+        } finally {
             log.useSource(prev);
         }
 
         return env;
     }
 
-    /** Report the public api of a class that was supplied explicitly for compilation,
-     *  for example on the command line to javac.
+    /**
+     * Report the public api of a class that was supplied explicitly for compilation,
+     * for example on the command line to javac.
+     *
      * @param sym The symbol of the class.
      */
     public void reportPublicApi(ClassSymbol sym) {
-       // Override to collect the reported public api.
+        // Override to collect the reported public api.
     }
 
     /**
      * Perform dataflow checks on attributed parse trees.
      * These include checks for definite assignment and unreachable statements.
      * If any errors occur, an empty list will be returned.
+     *
      * @returns the list of attributed parse trees
      */
     public Queue<Env<AttrContext>> flow(Queue<Env<AttrContext>> envs) {
         ListBuffer<Env<AttrContext>> results = new ListBuffer<>();
-        for (Env<AttrContext> env: envs) {
+        for (Env<AttrContext> env : envs) {
             flow(env, results);
         }
         return stopIfError(CompileState.FLOW, results);
@@ -1316,9 +1395,9 @@ public class JavaCompiler {
             if (verboseCompilePolicy)
                 printNote("[flow " + env.enclClass.sym + "]");
             JavaFileObject prev = log.useSource(
-                                                env.enclClass.sym.sourcefile != null ?
-                                                env.enclClass.sym.sourcefile :
-                                                env.toplevel.sourcefile);
+                    env.enclClass.sym.sourcefile != null ?
+                            env.enclClass.sym.sourcefile :
+                            env.toplevel.sourcefile);
             try {
                 make.at(Position.FIRSTPOS);
                 TreeMaker localMake = make.forToplevel(env.toplevel);
@@ -1329,12 +1408,10 @@ public class JavaCompiler {
                     return;
 
                 results.add(env);
-            }
-            finally {
+            } finally {
                 log.useSource(prev);
             }
-        }
-        finally {
+        } finally {
             if (!taskListener.isEmpty()) {
                 TaskEvent e = new TaskEvent(TaskEvent.Kind.ANALYZE, env.toplevel, env.enclClass.sym);
                 taskListener.finished(e);
@@ -1346,11 +1423,12 @@ public class JavaCompiler {
      * Prepare attributed parse trees, in conjunction with their attribution contexts,
      * for source or code generation.
      * If any errors occur, an empty list will be returned.
+     *
      * @returns a list containing the classes to be generated
      */
     public Queue<Pair<Env<AttrContext>, JCClassDecl>> desugar(Queue<Env<AttrContext>> envs) {
         ListBuffer<Pair<Env<AttrContext>, JCClassDecl>> results = new ListBuffer<>();
-        for (Env<AttrContext> env: envs)
+        for (Env<AttrContext> env : envs)
             desugar(env, results);
         return stopIfError(CompileState.FLOW, results);
     }
@@ -1388,6 +1466,7 @@ public class JavaCompiler {
         class ScanNested extends TreeScanner {
             Set<Env<AttrContext>> dependencies = new LinkedHashSet<Env<AttrContext>>();
             protected boolean hasLambdas;
+
             @Override
             public void visitClassDef(JCClassDecl node) {
                 Type st = types.supertype(node.sym.type);
@@ -1416,11 +1495,13 @@ public class JavaCompiler {
                 }
                 super.visitClassDef(node);
             }
+
             @Override
             public void visitLambda(JCLambda tree) {
                 hasLambdas = true;
                 super.visitLambda(tree);
             }
+
             @Override
             public void visitReference(JCMemberReference tree) {
                 hasLambdas = true;
@@ -1429,9 +1510,9 @@ public class JavaCompiler {
         }
         ScanNested scanner = new ScanNested();
         scanner.scan(env.tree);
-        for (Env<AttrContext> dep: scanner.dependencies) {
-        if (!compileStates.isDone(dep, CompileState.FLOW))
-            desugaredEnvs.put(dep, desugar(flow(attribute(dep))));
+        for (Env<AttrContext> dep : scanner.dependencies) {
+            if (!compileStates.isDone(dep, CompileState.FLOW))
+                desugaredEnvs.put(dep, desugar(flow(attribute(dep))));
         }
 
         //We need to check for error another time as more classes might
@@ -1443,8 +1524,8 @@ public class JavaCompiler {
             printNote("[desugar " + env.enclClass.sym + "]");
 
         JavaFileObject prev = log.useSource(env.enclClass.sym.sourcefile != null ?
-                                  env.enclClass.sym.sourcefile :
-                                  env.toplevel.sourcefile);
+                env.enclClass.sym.sourcefile :
+                env.toplevel.sourcefile);
         try {
             //save tree prior to rewriting
             JCTree untranslated = env.tree;
@@ -1459,7 +1540,7 @@ public class JavaCompiler {
                     List<JCTree> pdef = lower.translateTopLevelClass(env, env.tree, localMake);
                     if (pdef.head != null) {
                         Assert.check(pdef.tail.isEmpty());
-                        results.add(new Pair<Env<AttrContext>, JCClassDecl>(env, (JCClassDecl)pdef.head));
+                        results.add(new Pair<Env<AttrContext>, JCClassDecl>(env, (JCClassDecl) pdef.head));
                     }
                 }
                 return;
@@ -1468,11 +1549,11 @@ public class JavaCompiler {
             if (stubOutput) {
                 //emit stub Java source file, only for compilation
                 //units enumerated explicitly on the command line
-                JCClassDecl cdef = (JCClassDecl)env.tree;
+                JCClassDecl cdef = (JCClassDecl) env.tree;
                 if (untranslated instanceof JCClassDecl &&
-                    rootClasses.contains((JCClassDecl)untranslated) &&
-                    ((cdef.mods.flags & (Flags.PROTECTED|Flags.PUBLIC)) != 0 ||
-                     cdef.sym.packge().getQualifiedName() == names.java_lang)) {
+                        rootClasses.contains((JCClassDecl) untranslated) &&
+                        ((cdef.mods.flags & (Flags.PROTECTED | Flags.PUBLIC)) != 0 ||
+                                cdef.sym.packge().getQualifiedName() == names.java_lang)) {
                     results.add(new Pair<Env<AttrContext>, JCClassDecl>(env, removeMethodBodies(cdef)));
                 }
                 return;
@@ -1498,9 +1579,9 @@ public class JavaCompiler {
             if (sourceOutput) {
                 //emit standard Java source file, only for compilation
                 //units enumerated explicitly on the command line
-                JCClassDecl cdef = (JCClassDecl)env.tree;
+                JCClassDecl cdef = (JCClassDecl) env.tree;
                 if (untranslated instanceof JCClassDecl &&
-                    rootClasses.contains((JCClassDecl)untranslated)) {
+                        rootClasses.contains((JCClassDecl) untranslated)) {
                     results.add(new Pair<Env<AttrContext>, JCClassDecl>(env, cdef));
                 }
                 return;
@@ -1515,17 +1596,17 @@ public class JavaCompiler {
 
             //generate code for each class
             for (List<JCTree> l = cdefs; l.nonEmpty(); l = l.tail) {
-                JCClassDecl cdef = (JCClassDecl)l.head;
+                JCClassDecl cdef = (JCClassDecl) l.head;
                 results.add(new Pair<Env<AttrContext>, JCClassDecl>(env, cdef));
             }
-        }
-        finally {
+        } finally {
             log.useSource(prev);
         }
 
     }
 
-    /** Generates the source or class file for a list of classes.
+    /**
+     * Generates the source or class file for a list of classes.
      * The decision to generate a source file or a class file is
      * based upon the compiler's options.
      * Generation stops if an error occurs while writing files.
@@ -1540,14 +1621,14 @@ public class JavaCompiler {
 
         boolean usePrintSource = (stubOutput || sourceOutput || printFlat);
 
-        for (Pair<Env<AttrContext>, JCClassDecl> x: queue) {
+        for (Pair<Env<AttrContext>, JCClassDecl> x : queue) {
             Env<AttrContext> env = x.fst;
             JCClassDecl cdef = x.snd;
 
             if (verboseCompilePolicy) {
                 printNote("[generate "
-                               + (usePrintSource ? " source" : "code")
-                               + " " + cdef.sym + "]");
+                        + (usePrintSource ? " source" : "code")
+                        + " " + cdef.sym + "]");
             }
 
             if (!taskListener.isEmpty()) {
@@ -1556,8 +1637,8 @@ public class JavaCompiler {
             }
 
             JavaFileObject prev = log.useSource(env.enclClass.sym.sourcefile != null ?
-                                      env.enclClass.sym.sourcefile :
-                                      env.toplevel.sourcefile);
+                    env.enclClass.sym.sourcefile :
+                    env.toplevel.sourcefile);
             try {
                 JavaFileObject file;
                 if (usePrintSource)
@@ -1573,7 +1654,7 @@ public class JavaCompiler {
                     results.add(file);
             } catch (IOException ex) {
                 log.error(cdef.pos(), "class.cant.write",
-                          cdef.sym, ex.getMessage());
+                        cdef.sym, ex.getMessage());
                 return;
             } finally {
                 log.useSource(prev);
@@ -1586,73 +1667,75 @@ public class JavaCompiler {
         }
     }
 
-        // where
-        Map<JCCompilationUnit, Queue<Env<AttrContext>>> groupByFile(Queue<Env<AttrContext>> envs) {
-            // use a LinkedHashMap to preserve the order of the original list as much as possible
-            Map<JCCompilationUnit, Queue<Env<AttrContext>>> map = new LinkedHashMap<JCCompilationUnit, Queue<Env<AttrContext>>>();
-            for (Env<AttrContext> env: envs) {
-                Queue<Env<AttrContext>> sublist = map.get(env.toplevel);
-                if (sublist == null) {
-                    sublist = new ListBuffer<Env<AttrContext>>();
-                    map.put(env.toplevel, sublist);
-                }
-                sublist.add(env);
+    // where
+    Map<JCCompilationUnit, Queue<Env<AttrContext>>> groupByFile(Queue<Env<AttrContext>> envs) {
+        // use a LinkedHashMap to preserve the order of the original list as much as possible
+        Map<JCCompilationUnit, Queue<Env<AttrContext>>> map = new LinkedHashMap<JCCompilationUnit, Queue<Env<AttrContext>>>();
+        for (Env<AttrContext> env : envs) {
+            Queue<Env<AttrContext>> sublist = map.get(env.toplevel);
+            if (sublist == null) {
+                sublist = new ListBuffer<Env<AttrContext>>();
+                map.put(env.toplevel, sublist);
             }
-            return map;
+            sublist.add(env);
         }
+        return map;
+    }
 
-        JCClassDecl removeMethodBodies(JCClassDecl cdef) {
-            final boolean isInterface = (cdef.mods.flags & Flags.INTERFACE) != 0;
-            class MethodBodyRemover extends TreeTranslator {
-                @Override
-                public void visitMethodDef(JCMethodDecl tree) {
-                    tree.mods.flags &= ~Flags.SYNCHRONIZED;
-                    for (JCVariableDecl vd : tree.params)
-                        vd.mods.flags &= ~Flags.FINAL;
-                    tree.body = null;
-                    super.visitMethodDef(tree);
-                }
-                @Override
-                public void visitVarDef(JCVariableDecl tree) {
-                    if (tree.init != null && tree.init.type.constValue() == null)
-                        tree.init = null;
-                    super.visitVarDef(tree);
-                }
-                @Override
-                public void visitClassDef(JCClassDecl tree) {
-                    ListBuffer<JCTree> newdefs = new ListBuffer<>();
-                    for (List<JCTree> it = tree.defs; it.tail != null; it = it.tail) {
-                        JCTree t = it.head;
-                        switch (t.getTag()) {
+    JCClassDecl removeMethodBodies(JCClassDecl cdef) {
+        final boolean isInterface = (cdef.mods.flags & Flags.INTERFACE) != 0;
+        class MethodBodyRemover extends TreeTranslator {
+            @Override
+            public void visitMethodDef(JCMethodDecl tree) {
+                tree.mods.flags &= ~Flags.SYNCHRONIZED;
+                for (JCVariableDecl vd : tree.params)
+                    vd.mods.flags &= ~Flags.FINAL;
+                tree.body = null;
+                super.visitMethodDef(tree);
+            }
+
+            @Override
+            public void visitVarDef(JCVariableDecl tree) {
+                if (tree.init != null && tree.init.type.constValue() == null)
+                    tree.init = null;
+                super.visitVarDef(tree);
+            }
+
+            @Override
+            public void visitClassDef(JCClassDecl tree) {
+                ListBuffer<JCTree> newdefs = new ListBuffer<>();
+                for (List<JCTree> it = tree.defs; it.tail != null; it = it.tail) {
+                    JCTree t = it.head;
+                    switch (t.getTag()) {
                         case CLASSDEF:
                             if (isInterface ||
-                                (((JCClassDecl) t).mods.flags & (Flags.PROTECTED|Flags.PUBLIC)) != 0 ||
-                                (((JCClassDecl) t).mods.flags & (Flags.PRIVATE)) == 0 && ((JCClassDecl) t).sym.packge().getQualifiedName() == names.java_lang)
+                                    (((JCClassDecl) t).mods.flags & (Flags.PROTECTED | Flags.PUBLIC)) != 0 ||
+                                    (((JCClassDecl) t).mods.flags & (Flags.PRIVATE)) == 0 && ((JCClassDecl) t).sym.packge().getQualifiedName() == names.java_lang)
                                 newdefs.append(t);
                             break;
                         case METHODDEF:
                             if (isInterface ||
-                                (((JCMethodDecl) t).mods.flags & (Flags.PROTECTED|Flags.PUBLIC)) != 0 ||
-                                ((JCMethodDecl) t).sym.name == names.init ||
-                                (((JCMethodDecl) t).mods.flags & (Flags.PRIVATE)) == 0 && ((JCMethodDecl) t).sym.packge().getQualifiedName() == names.java_lang)
+                                    (((JCMethodDecl) t).mods.flags & (Flags.PROTECTED | Flags.PUBLIC)) != 0 ||
+                                    ((JCMethodDecl) t).sym.name == names.init ||
+                                    (((JCMethodDecl) t).mods.flags & (Flags.PRIVATE)) == 0 && ((JCMethodDecl) t).sym.packge().getQualifiedName() == names.java_lang)
                                 newdefs.append(t);
                             break;
                         case VARDEF:
-                            if (isInterface || (((JCVariableDecl) t).mods.flags & (Flags.PROTECTED|Flags.PUBLIC)) != 0 ||
-                                (((JCVariableDecl) t).mods.flags & (Flags.PRIVATE)) == 0 && ((JCVariableDecl) t).sym.packge().getQualifiedName() == names.java_lang)
+                            if (isInterface || (((JCVariableDecl) t).mods.flags & (Flags.PROTECTED | Flags.PUBLIC)) != 0 ||
+                                    (((JCVariableDecl) t).mods.flags & (Flags.PRIVATE)) == 0 && ((JCVariableDecl) t).sym.packge().getQualifiedName() == names.java_lang)
                                 newdefs.append(t);
                             break;
                         default:
                             break;
-                        }
                     }
-                    tree.defs = newdefs.toList();
-                    super.visitClassDef(tree);
                 }
+                tree.defs = newdefs.toList();
+                super.visitClassDef(tree);
             }
-            MethodBodyRemover r = new MethodBodyRemover();
-            return r.translate(cdef);
         }
+        MethodBodyRemover r = new MethodBodyRemover();
+        return r.translate(cdef);
+    }
 
     public void reportDeferredDiagnostics() {
         if (errorCount() == 0
@@ -1670,7 +1753,8 @@ public class JavaCompiler {
         }
     }
 
-    /** Close the compiler, flushing the logs
+    /**
+     * Close the compiler, flushing the logs
      */
     public void close() {
         close(true);
@@ -1707,7 +1791,7 @@ public class JavaCompiler {
                 names.dispose();
             names = null;
 
-            for (Closeable c: closeables) {
+            for (Closeable c : closeables) {
                 try {
                     c.close();
                 } catch (IOException e) {
@@ -1727,7 +1811,8 @@ public class JavaCompiler {
         log.printRawLines(Log.WriterKind.NOTICE, lines);
     }
 
-    /** Print numbers of errors and warnings.
+    /**
+     * Print numbers of errors and warnings.
      */
     public void printCount(String kind, int count) {
         if (count != 0) {

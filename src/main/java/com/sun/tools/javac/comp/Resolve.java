@@ -70,16 +70,17 @@ import static com.sun.tools.javac.code.TypeTag.*;
 import static com.sun.tools.javac.comp.Resolve.MethodResolutionPhase.*;
 import static com.sun.tools.javac.tree.JCTree.Tag.*;
 
-/** Helper class for name resolution, used mostly by the attribution phase.
+/**
+ * Helper class for name resolution, used mostly by the attribution phase.
  *
- *  <p><b>This is NOT part of any supported API.
- *  If you write code that depends on this, you do so at your own risk.
- *  This code and its internal interfaces are subject to change or
- *  deletion without notice.</b>
+ * <p><b>This is NOT part of any supported API.
+ * If you write code that depends on this, you do so at your own risk.
+ * This code and its internal interfaces are subject to change or
+ * deletion without notice.</b>
  */
 public class Resolve {
     protected static final Context.Key<Resolve> resolveKey =
-        new Context.Key<Resolve>();
+            new Context.Key<Resolve>();
 
     Names names;
     Log log;
@@ -108,14 +109,14 @@ public class Resolve {
         syms = Symtab.instance(context);
 
         varNotFound = new
-            SymbolNotFoundError(ABSENT_VAR);
+                SymbolNotFoundError(ABSENT_VAR);
         methodNotFound = new
-            SymbolNotFoundError(ABSENT_MTH);
+                SymbolNotFoundError(ABSENT_MTH);
         methodWithCorrectStaticnessNotFound = new
-            SymbolNotFoundError(WRONG_STATICNESS,
+                SymbolNotFoundError(WRONG_STATICNESS,
                 "method found has incorrect staticness");
         typeNotFound = new
-            SymbolNotFoundError(ABSENT_TYP);
+                SymbolNotFoundError(ABSENT_TYP);
 
         names = Names.instance(context);
         log = Log.instance(context);
@@ -144,7 +145,8 @@ public class Resolve {
         inapplicableMethodException = new InapplicableMethodException(diags);
     }
 
-    /** error symbols, which are returned when resolution fails
+    /**
+     * error symbols, which are returned when resolution fails
      */
     private final SymbolNotFoundError varNotFound;
     private final SymbolNotFoundError methodNotFound;
@@ -195,7 +197,7 @@ public class Resolve {
     }
 
     void reportVerboseResolutionDiagnostic(DiagnosticPosition dpos, Name name, Type site,
-            List<Type> argtypes, List<Type> typeargtypes, Symbol bestSoFar) {
+                                           List<Type> argtypes, List<Type> typeargtypes, Symbol bestSoFar) {
         boolean success = bestSoFar.kind < ERRONEOUS;
 
         if (success && !verboseResolutionMode.contains(VerboseResolutionMode.SUCCESS)) {
@@ -235,7 +237,7 @@ public class Resolve {
         }
         String key = success ? "verbose.resolve.multi" : "verbose.resolve.multi.1";
         List<Type> argtypes2 = Type.map(argtypes,
-                    deferredAttr.new RecoveryDeferredTypeMap(AttrMode.SPECULATIVE, bestSoFar, currentResolutionContext.step));
+                deferredAttr.new RecoveryDeferredTypeMap(AttrMode.SPECULATIVE, bestSoFar, currentResolutionContext.step));
         JCDiagnostic main = diags.note(log.currentSource(), dpos, key, name,
                 site.tsym, mostSpecificPos, currentResolutionContext.step,
                 methodArguments(argtypes2),
@@ -262,32 +264,36 @@ public class Resolve {
     }
     // </editor-fold>
 
-/* ************************************************************************
- * Identifier resolution
- *************************************************************************/
+    /* ************************************************************************
+     * Identifier resolution
+     *************************************************************************/
 
-    /** An environment is "static" if its static level is greater than
-     *  the one of its outer environment
+    /**
+     * An environment is "static" if its static level is greater than
+     * the one of its outer environment
      */
     protected static boolean isStatic(Env<AttrContext> env) {
         return env.info.staticLevel > env.outer.info.staticLevel;
     }
 
-    /** An environment is an "initializer" if it is a constructor or
-     *  an instance initializer.
+    /**
+     * An environment is an "initializer" if it is a constructor or
+     * an instance initializer.
      */
     static boolean isInitializer(Env<AttrContext> env) {
         Symbol owner = env.info.scope.owner;
         return owner.isConstructor() ||
-            owner.owner.kind == TYP &&
-            (owner.kind == VAR ||
-             owner.kind == MTH && (owner.flags() & BLOCK) != 0) &&
-            (owner.flags() & STATIC) == 0;
+                owner.owner.kind == TYP &&
+                        (owner.kind == VAR ||
+                                owner.kind == MTH && (owner.flags() & BLOCK) != 0) &&
+                        (owner.flags() & STATIC) == 0;
     }
 
-    /** Is class accessible in given evironment?
-     *  @param env    The current environment.
-     *  @param c      The class whose accessibility is checked.
+    /**
+     * Is class accessible in given evironment?
+     *
+     * @param env The current environment.
+     * @param c   The class whose accessibility is checked.
      */
     public boolean isAccessible(Env<AttrContext> env, TypeSymbol c) {
         return isAccessible(env, c, false);
@@ -295,23 +301,23 @@ public class Resolve {
 
     public boolean isAccessible(Env<AttrContext> env, TypeSymbol c, boolean checkInner) {
         boolean isAccessible = false;
-        switch ((short)(c.flags() & AccessFlags)) {
+        switch ((short) (c.flags() & AccessFlags)) {
             case PRIVATE:
                 isAccessible =
-                    env.enclClass.sym.outermostClass() ==
-                    c.owner.outermostClass();
+                        env.enclClass.sym.outermostClass() ==
+                                c.owner.outermostClass();
                 break;
             case 0:
                 isAccessible =
-                    env.toplevel.packge == c.owner // fast special case
-                    ||
-                    env.toplevel.packge == c.packge()
-                    ||
-                    // Hack: this case is added since synthesized default constructors
-                    // of anonymous classes should be allowed to access
-                    // classes which would be inaccessible otherwise.
-                    env.enclMethod != null &&
-                    (env.enclMethod.mods.flags & ANONCONSTR) != 0;
+                        env.toplevel.packge == c.owner // fast special case
+                                ||
+                                env.toplevel.packge == c.packge()
+                                ||
+                                // Hack: this case is added since synthesized default constructors
+                                // of anonymous classes should be allowed to access
+                                // classes which would be inaccessible otherwise.
+                                env.enclMethod != null &&
+                                        (env.enclMethod.mods.flags & ANONCONSTR) != 0;
                 break;
             default: // error recovery
             case PUBLIC:
@@ -319,30 +325,33 @@ public class Resolve {
                 break;
             case PROTECTED:
                 isAccessible =
-                    env.toplevel.packge == c.owner // fast special case
-                    ||
-                    env.toplevel.packge == c.packge()
-                    ||
-                    isInnerSubClass(env.enclClass.sym, c.owner);
+                        env.toplevel.packge == c.owner // fast special case
+                                ||
+                                env.toplevel.packge == c.packge()
+                                ||
+                                isInnerSubClass(env.enclClass.sym, c.owner);
                 break;
         }
         return (checkInner == false || c.type.getEnclosingType() == Type.noType) ?
-            isAccessible :
-            isAccessible && isAccessible(env, c.type.getEnclosingType(), checkInner);
+                isAccessible :
+                isAccessible && isAccessible(env, c.type.getEnclosingType(), checkInner);
     }
     //where
-        /** Is given class a subclass of given base class, or an inner class
-         *  of a subclass?
-         *  Return null if no such class exists.
-         *  @param c     The class which is the subclass or is contained in it.
-         *  @param base  The base class
-         */
-        private boolean isInnerSubClass(ClassSymbol c, Symbol base) {
-            while (c != null && !c.isSubClass(base, types)) {
-                c = c.owner.enclClass();
-            }
-            return c != null;
+
+    /**
+     * Is given class a subclass of given base class, or an inner class
+     * of a subclass?
+     * Return null if no such class exists.
+     *
+     * @param c    The class which is the subclass or is contained in it.
+     * @param base The base class
+     */
+    private boolean isInnerSubClass(ClassSymbol c, Symbol base) {
+        while (c != null && !c.isSubClass(base, types)) {
+            c = c.owner.enclClass();
         }
+        return c != null;
+    }
 
     boolean isAccessible(Env<AttrContext> env, Type t) {
         return isAccessible(env, t, false);
@@ -350,60 +359,64 @@ public class Resolve {
 
     boolean isAccessible(Env<AttrContext> env, Type t, boolean checkInner) {
         return (t.hasTag(ARRAY))
-            ? isAccessible(env, types.upperBound(types.elemtype(t)))
-            : isAccessible(env, t.tsym, checkInner);
+                ? isAccessible(env, types.upperBound(types.elemtype(t)))
+                : isAccessible(env, t.tsym, checkInner);
     }
 
-    /** Is symbol accessible as a member of given type in given environment?
-     *  @param env    The current environment.
-     *  @param site   The type of which the tested symbol is regarded
-     *                as a member.
-     *  @param sym    The symbol.
+    /**
+     * Is symbol accessible as a member of given type in given environment?
+     *
+     * @param env  The current environment.
+     * @param site The type of which the tested symbol is regarded
+     *             as a member.
+     * @param sym  The symbol.
      */
     public boolean isAccessible(Env<AttrContext> env, Type site, Symbol sym) {
         return isAccessible(env, site, sym, false);
     }
+
     public boolean isAccessible(Env<AttrContext> env, Type site, Symbol sym, boolean checkInner) {
         if (sym.name == names.init && sym.owner != site.tsym) return false;
-        switch ((short)(sym.flags() & AccessFlags)) {
-        case PRIVATE:
-            return
-                (env.enclClass.sym == sym.owner // fast special case
-                 ||
-                 env.enclClass.sym.outermostClass() ==
-                 sym.owner.outermostClass())
-                &&
-                sym.isInheritedIn(site.tsym, types);
-        case 0:
-            return
-                (env.toplevel.packge == sym.owner.owner // fast special case
-                 ||
-                 env.toplevel.packge == sym.packge())
-                &&
-                isAccessible(env, site, checkInner)
-                &&
-                sym.isInheritedIn(site.tsym, types)
-                &&
-                notOverriddenIn(site, sym);
-        case PROTECTED:
-            return
-                (env.toplevel.packge == sym.owner.owner // fast special case
-                 ||
-                 env.toplevel.packge == sym.packge()
-                 ||
-                 isProtectedAccessible(sym, env.enclClass.sym, site)
-                 ||
-                 // OK to select instance method or field from 'super' or type name
-                 // (but type names should be disallowed elsewhere!)
-                 env.info.selectSuper && (sym.flags() & STATIC) == 0 && sym.kind != TYP)
-                &&
-                isAccessible(env, site, checkInner)
-                &&
-                notOverriddenIn(site, sym);
-        default: // this case includes erroneous combinations as well
-            return isAccessible(env, site, checkInner) && notOverriddenIn(site, sym);
+        switch ((short) (sym.flags() & AccessFlags)) {
+            case PRIVATE:
+                return
+                        (env.enclClass.sym == sym.owner // fast special case
+                                ||
+                                env.enclClass.sym.outermostClass() ==
+                                        sym.owner.outermostClass())
+                                &&
+                                sym.isInheritedIn(site.tsym, types);
+            case 0:
+                return
+                        (env.toplevel.packge == sym.owner.owner // fast special case
+                                ||
+                                env.toplevel.packge == sym.packge())
+                                &&
+                                isAccessible(env, site, checkInner)
+                                &&
+                                sym.isInheritedIn(site.tsym, types)
+                                &&
+                                notOverriddenIn(site, sym);
+            case PROTECTED:
+                return
+                        (env.toplevel.packge == sym.owner.owner // fast special case
+                                ||
+                                env.toplevel.packge == sym.packge()
+                                ||
+                                isProtectedAccessible(sym, env.enclClass.sym, site)
+                                ||
+                                // OK to select instance method or field from 'super' or type name
+                                // (but type names should be disallowed elsewhere!)
+                                env.info.selectSuper && (sym.flags() & STATIC) == 0 && sym.kind != TYP)
+                                &&
+                                isAccessible(env, site, checkInner)
+                                &&
+                                notOverriddenIn(site, sym);
+            default: // this case includes erroneous combinations as well
+                return isAccessible(env, site, checkInner) && notOverriddenIn(site, sym);
         }
     }
+
     //where
     /* `sym' is accessible only if not overridden by
      * another symbol which is a member of `site'
@@ -415,31 +428,33 @@ public class Resolve {
         if (sym.kind != MTH || sym.isConstructor() || sym.isStatic())
             return true;
         else {
-            Symbol s2 = ((MethodSymbol)sym).implementation(site.tsym, types, true);
+            Symbol s2 = ((MethodSymbol) sym).implementation(site.tsym, types, true);
             return (s2 == null || s2 == sym || sym.owner == s2.owner ||
                     !types.isSubSignature(types.memberType(site, s2), types.memberType(site, sym)));
         }
     }
     //where
-        /** Is given protected symbol accessible if it is selected from given site
-         *  and the selection takes place in given class?
-         *  @param sym     The symbol with protected access
-         *  @param c       The class where the access takes place
-         *  @site          The type of the qualifier
-         */
-        private
-        boolean isProtectedAccessible(Symbol sym, ClassSymbol c, Type site) {
-            Type newSite = site.hasTag(TYPEVAR) ? site.getUpperBound() : site;
-            while (c != null &&
-                   !(c.isSubClass(sym.owner, types) &&
-                     (c.flags() & INTERFACE) == 0 &&
-                     // In JLS 2e 6.6.2.1, the subclass restriction applies
-                     // only to instance fields and methods -- types are excluded
-                     // regardless of whether they are declared 'static' or not.
-                     ((sym.flags() & STATIC) != 0 || sym.kind == TYP || newSite.tsym.isSubClass(c, types))))
-                c = c.owner.enclClass();
-            return c != null;
-        }
+
+    /**
+     * Is given protected symbol accessible if it is selected from given site
+     * and the selection takes place in given class?
+     *
+     * @param sym The symbol with protected access
+     * @param c   The class where the access takes place
+     * @site The type of the qualifier
+     */
+    private boolean isProtectedAccessible(Symbol sym, ClassSymbol c, Type site) {
+        Type newSite = site.hasTag(TYPEVAR) ? site.getUpperBound() : site;
+        while (c != null &&
+                !(c.isSubClass(sym.owner, types) &&
+                        (c.flags() & INTERFACE) == 0 &&
+                        // In JLS 2e 6.6.2.1, the subclass restriction applies
+                        // only to instance fields and methods -- types are excluded
+                        // regardless of whether they are declared 'static' or not.
+                        ((sym.flags() & STATIC) != 0 || sym.kind == TYP || newSite.tsym.isSubClass(c, types))))
+            c = c.owner.enclClass();
+        return c != null;
+    }
 
     /**
      * Performs a recursive scan of a type looking for accessibility problems
@@ -455,62 +470,63 @@ public class Resolve {
     Types.SimpleVisitor<Void, Env<AttrContext>> accessibilityChecker =
             new Types.SimpleVisitor<Void, Env<AttrContext>>() {
 
-        void visit(List<Type> ts, Env<AttrContext> env) {
-            for (Type t : ts) {
-                visit(t, env);
-            }
-        }
+                void visit(List<Type> ts, Env<AttrContext> env) {
+                    for (Type t : ts) {
+                        visit(t, env);
+                    }
+                }
 
-        public Void visitType(Type t, Env<AttrContext> env) {
-            return null;
-        }
+                public Void visitType(Type t, Env<AttrContext> env) {
+                    return null;
+                }
 
-        @Override
-        public Void visitArrayType(ArrayType t, Env<AttrContext> env) {
-            visit(t.elemtype, env);
-            return null;
-        }
+                @Override
+                public Void visitArrayType(ArrayType t, Env<AttrContext> env) {
+                    visit(t.elemtype, env);
+                    return null;
+                }
 
-        @Override
-        public Void visitClassType(ClassType t, Env<AttrContext> env) {
-            visit(t.getTypeArguments(), env);
-            if (!isAccessible(env, t, true)) {
-                accessBase(new AccessError(t.tsym), env.tree.pos(), env.enclClass.sym, t, t.tsym.name, true);
-            }
-            return null;
-        }
+                @Override
+                public Void visitClassType(ClassType t, Env<AttrContext> env) {
+                    visit(t.getTypeArguments(), env);
+                    if (!isAccessible(env, t, true)) {
+                        accessBase(new AccessError(t.tsym), env.tree.pos(), env.enclClass.sym, t, t.tsym.name, true);
+                    }
+                    return null;
+                }
 
-        @Override
-        public Void visitWildcardType(WildcardType t, Env<AttrContext> env) {
-            visit(t.type, env);
-            return null;
-        }
+                @Override
+                public Void visitWildcardType(WildcardType t, Env<AttrContext> env) {
+                    visit(t.type, env);
+                    return null;
+                }
 
-        @Override
-        public Void visitMethodType(MethodType t, Env<AttrContext> env) {
-            visit(t.getParameterTypes(), env);
-            visit(t.getReturnType(), env);
-            visit(t.getThrownTypes(), env);
-            return null;
-        }
-    };
+                @Override
+                public Void visitMethodType(MethodType t, Env<AttrContext> env) {
+                    visit(t.getParameterTypes(), env);
+                    visit(t.getReturnType(), env);
+                    visit(t.getThrownTypes(), env);
+                    return null;
+                }
+            };
 
-    /** Try to instantiate the type of a method so that it fits
-     *  given type arguments and argument types. If successful, return
-     *  the method's instantiated type, else return null.
-     *  The instantiation will take into account an additional leading
-     *  formal parameter if the method is an instance method seen as a member
-     *  of an under determined site. In this case, we treat site as an additional
-     *  parameter and the parameters of the class containing the method as
-     *  additional type variables that get instantiated.
+    /**
+     * Try to instantiate the type of a method so that it fits
+     * given type arguments and argument types. If successful, return
+     * the method's instantiated type, else return null.
+     * The instantiation will take into account an additional leading
+     * formal parameter if the method is an instance method seen as a member
+     * of an under determined site. In this case, we treat site as an additional
+     * parameter and the parameters of the class containing the method as
+     * additional type variables that get instantiated.
      *
-     *  @param env         The current environment
-     *  @param site        The type of which the method is a member.
-     *  @param m           The method symbol.
-     *  @param argtypes    The invocation's given value arguments.
-     *  @param typeargtypes    The invocation's given type arguments.
-     *  @param allowBoxing Allow boxing conversions of arguments.
-     *  @param useVarargs Box trailing arguments into an array for varargs.
+     * @param env          The current environment
+     * @param site         The type of which the method is a member.
+     * @param m            The method symbol.
+     * @param argtypes     The invocation's given value arguments.
+     * @param typeargtypes The invocation's given type arguments.
+     * @param allowBoxing  Allow boxing conversions of arguments.
+     * @param useVarargs   Box trailing arguments into an array for varargs.
      */
     Type rawInstantiate(Env<AttrContext> env,
                         Type site,
@@ -538,11 +554,11 @@ public class Resolve {
             List<Type> formals = pmt.tvars;
             List<Type> actuals = typeargtypes;
             while (formals.nonEmpty() && actuals.nonEmpty()) {
-                List<Type> bounds = types.subst(types.getBounds((TypeVar)formals.head),
-                                                pmt.tvars, typeargtypes);
+                List<Type> bounds = types.subst(types.getBounds((TypeVar) formals.head),
+                        pmt.tvars, typeargtypes);
                 for (; bounds.nonEmpty(); bounds = bounds.tail)
                     if (!types.isSubtypeUnchecked(actuals.head, bounds.head, warn))
-                        throw inapplicableMethodException.setMessage("explicit.param.do.not.conform.to.bounds",actuals.head, bounds);
+                        throw inapplicableMethodException.setMessage("explicit.param.do.not.conform.to.bounds", actuals.head, bounds);
                 formals = formals.tail;
                 actuals = actuals.tail;
             }
@@ -564,19 +580,19 @@ public class Resolve {
 
         if (instNeeded)
             return infer.instantiateMethod(env,
-                                    tvars,
-                                    (MethodType)mt,
-                                    resultInfo,
-                                    m,
-                                    argtypes,
-                                    allowBoxing,
-                                    useVarargs,
-                                    currentResolutionContext,
-                                    warn);
+                    tvars,
+                    (MethodType) mt,
+                    resultInfo,
+                    m,
+                    argtypes,
+                    allowBoxing,
+                    useVarargs,
+                    currentResolutionContext,
+                    warn);
 
         DeferredAttr.DeferredAttrContext dc = currentResolutionContext.deferredAttrContext(m, infer.emptyContext, resultInfo, warn);
         currentResolutionContext.methodCheck.argumentsAcceptable(env, dc,
-                                argtypes, mt.getParameterTypes(), warn);
+                argtypes, mt.getParameterTypes(), warn);
         dc.complete();
         return mt;
     }
@@ -602,13 +618,13 @@ public class Resolve {
             MethodResolutionPhase step = currentResolutionContext.step = env.info.pendingResolutionPhase;
             return rawInstantiate(env, site, m, resultInfo, argtypes, typeargtypes,
                     step.isBoxingRequired(), step.isVarargsRequired(), warn);
-        }
-        finally {
+        } finally {
             currentResolutionContext = prevContext;
         }
     }
 
-    /** Same but returns null instead throwing a NoInstanceException
+    /**
+     * Same but returns null instead throwing a NoInstanceException
      */
     Type instantiate(Env<AttrContext> env,
                      Type site,
@@ -621,7 +637,7 @@ public class Resolve {
                      Warner warn) {
         try {
             return rawInstantiate(env, site, m, resultInfo, argtypes, typeargtypes,
-                                  allowBoxing, useVarargs, warn);
+                    allowBoxing, useVarargs, warn);
         } catch (InapplicableMethodException ex) {
             return null;
         }
@@ -642,10 +658,10 @@ public class Resolve {
          * is assumed to be thrown.
          */
         void argumentsAcceptable(Env<AttrContext> env,
-                                DeferredAttrContext deferredAttrContext,
-                                List<Type> argtypes,
-                                List<Type> formals,
-                                Warner warn);
+                                 DeferredAttrContext deferredAttrContext,
+                                 List<Type> argtypes,
+                                 List<Type> formals,
+                                 Warner warn);
 
         /**
          * Retrieve the method check object that will be used during a
@@ -710,10 +726,10 @@ public class Resolve {
     abstract class AbstractMethodCheck implements MethodCheck {
         @Override
         public void argumentsAcceptable(final Env<AttrContext> env,
-                                    DeferredAttrContext deferredAttrContext,
-                                    List<Type> argtypes,
-                                    List<Type> formals,
-                                    Warner warn) {
+                                        DeferredAttrContext deferredAttrContext,
+                                        List<Type> argtypes,
+                                        List<Type> formals,
+                                        Warner warn) {
             //should we expand formals?
             boolean useVarargs = deferredAttrContext.phase.isVarargsRequired();
             List<JCExpression> trees = TreeInfo.args(env.tree);
@@ -790,7 +806,7 @@ public class Resolve {
 
     List<Type> dummyArgs(int length) {
         ListBuffer<Type> buf = new ListBuffer<>();
-        for (int i = 0 ; i < length ; i++) {
+        for (int i = 0; i < length; i++) {
             buf.append(Type.noType);
         }
         return buf.toList();
@@ -800,18 +816,18 @@ public class Resolve {
      * Main method applicability routine. Given a list of actual types A,
      * a list of formal types F, determines whether the types in A are
      * compatible (by method invocation conversion) with the types in F.
-     *
+     * <p>
      * Since this routine is shared between overload resolution and method
      * type-inference, a (possibly empty) inference context is used to convert
      * formal types to the corresponding 'undet' form ahead of a compatibility
      * check so that constraints can be propagated and collected.
-     *
+     * <p>
      * Moreover, if one or more types in A is a deferred type, this routine uses
      * DeferredAttr in order to perform deferred attribution. If one or more actual
      * deferred types are stuck, they are placed in a queue and revisited later
      * after the remainder of the arguments have been seen. If this is not sufficient
      * to 'unstuck' the argument, a cyclic inference error is called out.
-     *
+     * <p>
      * A method check handler (see above) is used in order to report errors.
      */
     MethodCheck resolveMethodCheck = new AbstractMethodCheck() {
@@ -824,10 +840,10 @@ public class Resolve {
 
         @Override
         public void argumentsAcceptable(final Env<AttrContext> env,
-                                    DeferredAttrContext deferredAttrContext,
-                                    List<Type> argtypes,
-                                    List<Type> formals,
-                                    Warner warn) {
+                                        DeferredAttrContext deferredAttrContext,
+                                        List<Type> argtypes,
+                                        List<Type> formals,
+                                        Warner warn) {
             super.argumentsAcceptable(env, deferredAttrContext, argtypes, formals, warn);
             //should we expand formals?
             if (deferredAttrContext.phase.isVarargsRequired()) {
@@ -854,10 +870,10 @@ public class Resolve {
         }
 
         private ResultInfo methodCheckResult(final boolean varargsCheck, Type to,
-                final DeferredAttr.DeferredAttrContext deferredAttrContext, Warner rsWarner) {
+                                             final DeferredAttr.DeferredAttrContext deferredAttrContext, Warner rsWarner) {
             CheckContext checkContext = new MethodCheckContext(!deferredAttrContext.phase.isBoxingRequired(), deferredAttrContext, rsWarner) {
                 MethodCheckDiag methodDiag = varargsCheck ?
-                                 MethodCheckDiag.VARARG_MISMATCH : MethodCheckDiag.ARG_MISMATCH;
+                        MethodCheckDiag.VARARG_MISMATCH : MethodCheckDiag.ARG_MISMATCH;
 
                 @Override
                 public void report(DiagnosticPosition pos, JCDiagnostic details) {
@@ -894,10 +910,10 @@ public class Resolve {
         }
 
         private ResultInfo methodCheckResult(final boolean varargsCheck, Type to,
-                final DeferredAttr.DeferredAttrContext deferredAttrContext, Warner rsWarner) {
+                                             final DeferredAttr.DeferredAttrContext deferredAttrContext, Warner rsWarner) {
             CheckContext checkContext = new MethodCheckContext(!deferredAttrContext.phase.isBoxingRequired(), deferredAttrContext, rsWarner) {
                 MethodCheckDiag methodDiag = varargsCheck ?
-                                 MethodCheckDiag.VARARG_MISMATCH : MethodCheckDiag.ARG_MISMATCH;
+                        MethodCheckDiag.VARARG_MISMATCH : MethodCheckDiag.ARG_MISMATCH;
 
                 @Override
                 public boolean compatible(Type found, Type req, Warner warn) {
@@ -918,7 +934,9 @@ public class Resolve {
         public MethodCheck mostSpecificCheck(List<Type> actuals, boolean strict) {
             return new MostSpecificCheck(strict, actuals);
         }
-    };
+    }
+
+    ;
 
     /**
      * Check context to be used during method applicability checks. A method check
@@ -931,9 +949,9 @@ public class Resolve {
         Warner rsWarner;
 
         public MethodCheckContext(boolean strict, DeferredAttrContext deferredAttrContext, Warner rsWarner) {
-           this.strict = strict;
-           this.deferredAttrContext = deferredAttrContext;
-           this.rsWarner = rsWarner;
+            this.strict = strict;
+            this.deferredAttrContext = deferredAttrContext;
+            this.rsWarner = rsWarner;
         }
 
         public boolean compatible(Type found, Type req, Warner warn) {
@@ -972,7 +990,7 @@ public class Resolve {
         @Override
         protected Type check(DiagnosticPosition pos, Type found) {
             if (found.hasTag(DEFERRED)) {
-                DeferredType dt = (DeferredType)found;
+                DeferredType dt = (DeferredType) found;
                 return dt.check(this);
             } else {
                 return super.check(pos, chk.checkNonVoid(pos, types.capture(U(found.baseType()))));
@@ -1021,10 +1039,10 @@ public class Resolve {
 
         @Override
         public void argumentsAcceptable(final Env<AttrContext> env,
-                                    DeferredAttrContext deferredAttrContext,
-                                    List<Type> formals1,
-                                    List<Type> formals2,
-                                    Warner warn) {
+                                        DeferredAttrContext deferredAttrContext,
+                                        List<Type> formals1,
+                                        List<Type> formals2,
+                                        Warner warn) {
             formals2 = adjustArgs(formals2, deferredAttrContext.msym, formals1.length(), deferredAttrContext.phase.isVarargsRequired());
             while (formals2.nonEmpty()) {
                 ResultInfo mresult = methodCheckResult(formals2.head, deferredAttrContext, warn, actuals.head);
@@ -1035,13 +1053,13 @@ public class Resolve {
             }
         }
 
-       /**
-        * Create a method check context to be used during the most specific applicability check
-        */
+        /**
+         * Create a method check context to be used during the most specific applicability check
+         */
         ResultInfo methodCheckResult(Type to, DeferredAttr.DeferredAttrContext deferredAttrContext,
-               Warner rsWarner, Type actual) {
-           return attr.new ResultInfo(Kinds.VAL, to,
-                   new MostSpecificCheckContext(strict, deferredAttrContext, rsWarner, actual));
+                                     Warner rsWarner, Type actual) {
+            return attr.new ResultInfo(Kinds.VAL, to,
+                    new MostSpecificCheckContext(strict, deferredAttrContext, rsWarner, actual));
         }
 
         /**
@@ -1068,7 +1086,7 @@ public class Resolve {
                             DeferredType.SpeculativeCache.Entry e = dt.speculativeCache.get(deferredAttrContext.msym, deferredAttrContext.phase);
                             return (e == null || e.speculativeTree == deferredAttr.stuckTree)
                                     ? super.compatible(found, req, warn) :
-                                      mostSpecific(found, req, e.speculativeTree, warn);
+                                    mostSpecific(found, req, e.speculativeTree, warn);
                         default:
                             return standaloneMostSpecific(found, req, actual, warn);
                     }
@@ -1146,7 +1164,7 @@ public class Resolve {
                         if (types.isSameTypes(desc_t.getParameterTypes(),
                                 inferenceContext().asFree(desc_s.getParameterTypes()))) {
                             if (types.asSuper(t, s.tsym) != null ||
-                                types.asSuper(s, t.tsym) != null) {
+                                    types.asSuper(s, t.tsym) != null) {
                                 result &= MostSpecificCheckContext.super.compatible(t, s, warn);
                             } else if (!desc_s.getReturnType().hasTag(VOID)) {
                                 //perform structural comparison
@@ -1173,7 +1191,7 @@ public class Resolve {
                         if (types.isSameTypes(desc_t.getParameterTypes(),
                                 inferenceContext().asFree(desc_s.getParameterTypes()))) {
                             if (types.asSuper(t, s.tsym) != null ||
-                                types.asSuper(s, t.tsym) != null) {
+                                    types.asSuper(s, t.tsym) != null) {
                                 result &= MostSpecificCheckContext.super.compatible(t, s, warn);
                             } else if (!desc_s.getReturnType().hasTag(VOID)) {
                                 //perform structural comparison
@@ -1225,15 +1243,19 @@ public class Resolve {
             this.diagnostic = null;
             this.diags = diags;
         }
+
         InapplicableMethodException setMessage() {
-            return setMessage((JCDiagnostic)null);
+            return setMessage((JCDiagnostic) null);
         }
+
         InapplicableMethodException setMessage(String key) {
             return setMessage(key != null ? diags.fragment(key) : null);
         }
+
         InapplicableMethodException setMessage(String key, Object... args) {
             return setMessage(key != null ? diags.fragment(key, args) : null);
         }
+
         InapplicableMethodException setMessage(JCDiagnostic diag) {
             this.diagnostic = diag;
             return this;
@@ -1243,27 +1265,30 @@ public class Resolve {
             return diagnostic;
         }
     }
+
     private final InapplicableMethodException inapplicableMethodException;
 
-/* ***************************************************************************
- *  Symbol lookup
- *  the following naming conventions for arguments are used
- *
- *       env      is the environment where the symbol was mentioned
- *       site     is the type of which the symbol is a member
- *       name     is the symbol's name
- *                if no arguments are given
- *       argtypes are the value arguments, if we search for a method
- *
- *  If no symbol was found, a ResolveError detailing the problem is returned.
- ****************************************************************************/
+    /* ***************************************************************************
+     *  Symbol lookup
+     *  the following naming conventions for arguments are used
+     *
+     *       env      is the environment where the symbol was mentioned
+     *       site     is the type of which the symbol is a member
+     *       name     is the symbol's name
+     *                if no arguments are given
+     *       argtypes are the value arguments, if we search for a method
+     *
+     *  If no symbol was found, a ResolveError detailing the problem is returned.
+     ****************************************************************************/
 
-    /** Find field. Synthetic fields are always skipped.
-     *  @param env     The current environment.
-     *  @param site    The original type from where the selection takes place.
-     *  @param name    The name of the field.
-     *  @param c       The class to search for the field. This is always
-     *                 a superclass or implemented interface of site's class.
+    /**
+     * Find field. Synthetic fields are always skipped.
+     *
+     * @param env  The current environment.
+     * @param site The original type from where the selection takes place.
+     * @param name The name of the field.
+     * @param c    The class to search for the field. This is always
+     *             a superclass or implemented interface of site's class.
      */
     Symbol findField(Env<AttrContext> env,
                      Type site,
@@ -1277,7 +1302,7 @@ public class Resolve {
         while (e.scope != null) {
             if (e.sym.kind == VAR && (e.sym.flags_field & SYNTHETIC) == 0) {
                 return isAccessible(env, site, e.sym)
-                    ? e.sym : new AccessError(env, site, e.sym);
+                        ? e.sym : new AccessError(env, site, e.sym);
             }
             e = e.next();
         }
@@ -1291,7 +1316,7 @@ public class Resolve {
              l = l.tail) {
             sym = findField(env, site, name, l.head.tsym);
             if (bestSoFar.exists() && sym.exists() &&
-                sym.owner != bestSoFar.owner)
+                    sym.owner != bestSoFar.owner)
                 bestSoFar = new AmbiguityError(bestSoFar, sym);
             else if (sym.kind < bestSoFar.kind)
                 bestSoFar = sym;
@@ -1299,26 +1324,30 @@ public class Resolve {
         return bestSoFar;
     }
 
-    /** Resolve a field identifier, throw a fatal error if not found.
-     *  @param pos       The position to use for error reporting.
-     *  @param env       The environment current at the method invocation.
-     *  @param site      The type of the qualifying expression, in which
-     *                   identifier is searched.
-     *  @param name      The identifier's name.
+    /**
+     * Resolve a field identifier, throw a fatal error if not found.
+     *
+     * @param pos  The position to use for error reporting.
+     * @param env  The environment current at the method invocation.
+     * @param site The type of the qualifying expression, in which
+     *             identifier is searched.
+     * @param name The identifier's name.
      */
     public VarSymbol resolveInternalField(DiagnosticPosition pos, Env<AttrContext> env,
                                           Type site, Name name) {
         Symbol sym = findField(env, site, name, site.tsym);
-        if (sym.kind == VAR) return (VarSymbol)sym;
+        if (sym.kind == VAR) return (VarSymbol) sym;
         else throw new FatalError(
-                 diags.fragment("fatal.err.cant.locate.field",
-                                name));
+                diags.fragment("fatal.err.cant.locate.field",
+                        name));
     }
 
-    /** Find unqualified variable or field with given name.
-     *  Synthetic fields always skipped.
-     *  @param env     The current environment.
-     *  @param name    The name of the variable or field.
+    /**
+     * Find unqualified variable or field with given name.
+     * Synthetic fields always skipped.
+     *
+     * @param env  The current environment.
+     * @param name The name of the variable or field.
      */
     Symbol findVar(Env<AttrContext> env, Name name) {
         Symbol bestSoFar = varNotFound;
@@ -1329,18 +1358,18 @@ public class Resolve {
             if (isStatic(env1)) staticOnly = true;
             Scope.Entry e = env1.info.scope.lookup(name);
             while (e.scope != null &&
-                   (e.sym.kind != VAR ||
-                    (e.sym.flags_field & SYNTHETIC) != 0))
+                    (e.sym.kind != VAR ||
+                            (e.sym.flags_field & SYNTHETIC) != 0))
                 e = e.next();
             sym = (e.scope != null)
-                ? e.sym
-                : findField(
+                    ? e.sym
+                    : findField(
                     env1, env1.enclClass.sym.type, name, env1.enclClass.sym);
             if (sym.exists()) {
                 if (staticOnly &&
-                    sym.kind == VAR &&
-                    sym.owner.kind == TYP &&
-                    (sym.flags() & STATIC) == 0)
+                        sym.kind == VAR &&
+                        sym.owner.kind == TYP &&
+                        (sym.flags() & STATIC) == 0)
                     return new StaticError(sym);
                 else
                     return sym;
@@ -1359,7 +1388,7 @@ public class Resolve {
             return bestSoFar;
 
         Symbol origin = null;
-        for (Scope sc : new Scope[] { env.toplevel.namedImportScope, env.toplevel.starImportScope }) {
+        for (Scope sc : new Scope[]{env.toplevel.namedImportScope, env.toplevel.starImportScope}) {
             Scope.Entry e = sc.lookup(name);
             for (; e.scope != null; e = e.next()) {
                 sym = e.sym;
@@ -1371,7 +1400,7 @@ public class Resolve {
                 else if (bestSoFar.kind >= VAR) {
                     origin = e.getOrigin().owner;
                     bestSoFar = isAccessible(env, origin.type, sym)
-                        ? sym : new AccessError(env, origin.type, sym);
+                            ? sym : new AccessError(env, origin.type, sym);
                 }
             }
             if (bestSoFar.exists()) break;
@@ -1384,16 +1413,18 @@ public class Resolve {
 
     Warner noteWarner = new Warner();
 
-    /** Select the best method for a call site among two choices.
-     *  @param env              The current environment.
-     *  @param site             The original type from where the
-     *                          selection takes place.
-     *  @param argtypes         The invocation's value arguments,
-     *  @param typeargtypes     The invocation's type arguments,
-     *  @param sym              Proposed new best match.
-     *  @param bestSoFar        Previously found best match.
-     *  @param allowBoxing Allow boxing conversions of arguments.
-     *  @param useVarargs Box trailing arguments into an array for varargs.
+    /**
+     * Select the best method for a call site among two choices.
+     *
+     * @param env          The current environment.
+     * @param site         The original type from where the
+     *                     selection takes place.
+     * @param argtypes     The invocation's value arguments,
+     * @param typeargtypes The invocation's type arguments,
+     * @param sym          Proposed new best match.
+     * @param bestSoFar    Previously found best match.
+     * @param allowBoxing  Allow boxing conversions of arguments.
+     * @param useVarargs   Box trailing arguments into an array for varargs.
      */
     @SuppressWarnings("fallthrough")
     Symbol selectBest(Env<AttrContext> env,
@@ -1410,13 +1441,13 @@ public class Resolve {
             return bestSoFar;
         } else if (useVarargs && (sym.flags() & VARARGS) == 0) {
             return bestSoFar.kind >= ERRONEOUS ?
-                    new BadVarargsMethod((ResolveError)bestSoFar) :
+                    new BadVarargsMethod((ResolveError) bestSoFar) :
                     bestSoFar;
         }
         Assert.check(sym.kind < AMBIGUOUS);
         try {
             Type mt = rawInstantiate(env, site, sym, null, argtypes, typeargtypes,
-                               allowBoxing, useVarargs, types.noWarnings);
+                    allowBoxing, useVarargs, types.noWarnings);
             if (!operator || verboseResolutionMode.contains(VerboseResolutionMode.PREDEF))
                 currentResolutionContext.addApplicableCandidate(sym, mt);
         } catch (InapplicableMethodException ex) {
@@ -1434,13 +1465,13 @@ public class Resolve {
         }
         if (!isAccessible(env, site, sym)) {
             return (bestSoFar.kind == ABSENT_MTH)
-                ? new AccessError(env, site, sym)
-                : bestSoFar;
+                    ? new AccessError(env, site, sym)
+                    : bestSoFar;
         }
         return (bestSoFar.kind > AMBIGUOUS)
-            ? sym
-            : mostSpecific(argtypes, sym, bestSoFar, env, site,
-                           allowBoxing && operator, useVarargs);
+                ? sym
+                : mostSpecific(argtypes, sym, bestSoFar, env, site,
+                allowBoxing && operator, useVarargs);
     }
 
     /* Return the most specific of the two methods for a call,
@@ -1460,66 +1491,67 @@ public class Resolve {
                         boolean allowBoxing,
                         boolean useVarargs) {
         switch (m2.kind) {
-        case MTH:
-            if (m1 == m2) return m1;
-            boolean m1SignatureMoreSpecific =
-                    signatureMoreSpecific(argtypes, env, site, m1, m2, allowBoxing, useVarargs);
-            boolean m2SignatureMoreSpecific =
-                    signatureMoreSpecific(argtypes, env, site, m2, m1, allowBoxing, useVarargs);
-            if (m1SignatureMoreSpecific && m2SignatureMoreSpecific) {
-                Type mt1 = types.memberType(site, m1);
-                Type mt2 = types.memberType(site, m2);
-                if (!types.overrideEquivalent(mt1, mt2))
+            case MTH:
+                if (m1 == m2) return m1;
+                boolean m1SignatureMoreSpecific =
+                        signatureMoreSpecific(argtypes, env, site, m1, m2, allowBoxing, useVarargs);
+                boolean m2SignatureMoreSpecific =
+                        signatureMoreSpecific(argtypes, env, site, m2, m1, allowBoxing, useVarargs);
+                if (m1SignatureMoreSpecific && m2SignatureMoreSpecific) {
+                    Type mt1 = types.memberType(site, m1);
+                    Type mt2 = types.memberType(site, m2);
+                    if (!types.overrideEquivalent(mt1, mt2))
+                        return ambiguityError(m1, m2);
+
+                    // same signature; select (a) the non-bridge method, or
+                    // (b) the one that overrides the other, or (c) the concrete
+                    // one, or (d) merge both abstract signatures
+                    if ((m1.flags() & BRIDGE) != (m2.flags() & BRIDGE))
+                        return ((m1.flags() & BRIDGE) != 0) ? m2 : m1;
+
+                    // if one overrides or hides the other, use it
+                    TypeSymbol m1Owner = (TypeSymbol) m1.owner;
+                    TypeSymbol m2Owner = (TypeSymbol) m2.owner;
+                    if (types.asSuper(m1Owner.type, m2Owner) != null &&
+                            ((m1.owner.flags_field & INTERFACE) == 0 ||
+                                    (m2.owner.flags_field & INTERFACE) != 0) &&
+                            m1.overrides(m2, m1Owner, types, false))
+                        return m1;
+                    if (types.asSuper(m2Owner.type, m1Owner) != null &&
+                            ((m2.owner.flags_field & INTERFACE) == 0 ||
+                                    (m1.owner.flags_field & INTERFACE) != 0) &&
+                            m2.overrides(m1, m2Owner, types, false))
+                        return m2;
+                    boolean m1Abstract = (m1.flags() & ABSTRACT) != 0;
+                    boolean m2Abstract = (m2.flags() & ABSTRACT) != 0;
+                    if (m1Abstract && !m2Abstract) return m2;
+                    if (m2Abstract && !m1Abstract) return m1;
+                    // both abstract or both concrete
                     return ambiguityError(m1, m2);
-
-                // same signature; select (a) the non-bridge method, or
-                // (b) the one that overrides the other, or (c) the concrete
-                // one, or (d) merge both abstract signatures
-                if ((m1.flags() & BRIDGE) != (m2.flags() & BRIDGE))
-                    return ((m1.flags() & BRIDGE) != 0) ? m2 : m1;
-
-                // if one overrides or hides the other, use it
-                TypeSymbol m1Owner = (TypeSymbol)m1.owner;
-                TypeSymbol m2Owner = (TypeSymbol)m2.owner;
-                if (types.asSuper(m1Owner.type, m2Owner) != null &&
-                    ((m1.owner.flags_field & INTERFACE) == 0 ||
-                     (m2.owner.flags_field & INTERFACE) != 0) &&
-                    m1.overrides(m2, m1Owner, types, false))
-                    return m1;
-                if (types.asSuper(m2Owner.type, m1Owner) != null &&
-                    ((m2.owner.flags_field & INTERFACE) == 0 ||
-                     (m1.owner.flags_field & INTERFACE) != 0) &&
-                    m2.overrides(m1, m2Owner, types, false))
-                    return m2;
-                boolean m1Abstract = (m1.flags() & ABSTRACT) != 0;
-                boolean m2Abstract = (m2.flags() & ABSTRACT) != 0;
-                if (m1Abstract && !m2Abstract) return m2;
-                if (m2Abstract && !m1Abstract) return m1;
-                // both abstract or both concrete
-                return ambiguityError(m1, m2);
-            }
-            if (m1SignatureMoreSpecific) return m1;
-            if (m2SignatureMoreSpecific) return m2;
-            return ambiguityError(m1, m2);
-        case AMBIGUOUS:
-            //check if m1 is more specific than all ambiguous methods in m2
-            AmbiguityError e = (AmbiguityError)m2.baseSymbol();
-            for (Symbol s : e.ambiguousSyms) {
-                if (mostSpecific(argtypes, m1, s, env, site, allowBoxing, useVarargs) != m1) {
-                    return e.addAmbiguousSymbol(m1);
                 }
-            }
-            return m1;
-        default:
-            throw new AssertionError();
+                if (m1SignatureMoreSpecific) return m1;
+                if (m2SignatureMoreSpecific) return m2;
+                return ambiguityError(m1, m2);
+            case AMBIGUOUS:
+                //check if m1 is more specific than all ambiguous methods in m2
+                AmbiguityError e = (AmbiguityError) m2.baseSymbol();
+                for (Symbol s : e.ambiguousSyms) {
+                    if (mostSpecific(argtypes, m1, s, env, site, allowBoxing, useVarargs) != m1) {
+                        return e.addAmbiguousSymbol(m1);
+                    }
+                }
+                return m1;
+            default:
+                throw new AssertionError();
         }
     }
+
     //where
     private boolean signatureMoreSpecific(List<Type> actuals, Env<AttrContext> env, Type site, Symbol m1, Symbol m2, boolean allowBoxing, boolean useVarargs) {
         noteWarner.clear();
         int maxLength = Math.max(
-                            Math.max(m1.type.getParameterTypes().length(), actuals.length()),
-                            m2.type.getParameterTypes().length());
+                Math.max(m1.type.getParameterTypes().length(), actuals.length()),
+                m2.type.getParameterTypes().length());
         MethodResolutionContext prevResolutionContext = currentResolutionContext;
         try {
             currentResolutionContext = new MethodResolutionContext();
@@ -1551,6 +1583,7 @@ public class Resolve {
             return args;
         }
     }
+
     //where
     Type mostSpecificReturnType(Type mt1, Type mt2) {
         Type rt1 = mt1.getReturnType();
@@ -1573,6 +1606,7 @@ public class Resolve {
             return null;
         }
     }
+
     //where
     Symbol ambiguityError(Symbol m1, Symbol m2) {
         if (((m1.flags() | m2.flags()) & CLASH) != 0) {
@@ -1583,51 +1617,56 @@ public class Resolve {
     }
 
     Symbol findMethodInScope(Env<AttrContext> env,
-            Type site,
-            Name name,
-            List<Type> argtypes,
-            List<Type> typeargtypes,
-            Scope sc,
-            Symbol bestSoFar,
-            boolean allowBoxing,
-            boolean useVarargs,
-            boolean operator,
-            boolean abstractok) {
+                             Type site,
+                             Name name,
+                             List<Type> argtypes,
+                             List<Type> typeargtypes,
+                             Scope sc,
+                             Symbol bestSoFar,
+                             boolean allowBoxing,
+                             boolean useVarargs,
+                             boolean operator,
+                             boolean abstractok) {
         for (Symbol s : sc.getElementsByName(name, new LookupFilter(abstractok))) {
             bestSoFar = selectBest(env, site, argtypes, typeargtypes, s,
                     bestSoFar, allowBoxing, useVarargs, operator);
         }
         return bestSoFar;
     }
+
     //where
-        class LookupFilter implements Filter<Symbol> {
+    class LookupFilter implements Filter<Symbol> {
 
-            boolean abstractOk;
+        boolean abstractOk;
 
-            LookupFilter(boolean abstractOk) {
-                this.abstractOk = abstractOk;
-            }
+        LookupFilter(boolean abstractOk) {
+            this.abstractOk = abstractOk;
+        }
 
-            public boolean accepts(Symbol s) {
-                long flags = s.flags();
-                return s.kind == MTH &&
-                        (flags & SYNTHETIC) == 0 &&
-                        (abstractOk ||
-                        (flags & DEFAULT) != 0 ||
-                        (flags & ABSTRACT) == 0);
-            }
-        };
+        public boolean accepts(Symbol s) {
+            long flags = s.flags();
+            return s.kind == MTH &&
+                    (flags & SYNTHETIC) == 0 &&
+                    (abstractOk ||
+                            (flags & DEFAULT) != 0 ||
+                            (flags & ABSTRACT) == 0);
+        }
+    }
 
-    /** Find best qualified method matching given name, type and value
-     *  arguments.
-     *  @param env       The current environment.
-     *  @param site      The original type from where the selection
-     *                   takes place.
-     *  @param name      The method's name.
-     *  @param argtypes  The method's value arguments.
-     *  @param typeargtypes The method's type arguments
-     *  @param allowBoxing Allow boxing conversions of arguments.
-     *  @param useVarargs Box trailing arguments into an array for varargs.
+    ;
+
+    /**
+     * Find best qualified method matching given name, type and value
+     * arguments.
+     *
+     * @param env          The current environment.
+     * @param site         The original type from where the selection
+     *                     takes place.
+     * @param name         The method's name.
+     * @param argtypes     The method's value arguments.
+     * @param typeargtypes The method's type arguments
+     * @param allowBoxing  Allow boxing conversions of arguments.
+     * @param useVarargs   Box trailing arguments into an array for varargs.
      */
     Symbol findMethod(Env<AttrContext> env,
                       Type site,
@@ -1639,17 +1678,18 @@ public class Resolve {
                       boolean operator) {
         Symbol bestSoFar = methodNotFound;
         bestSoFar = findMethod(env,
-                          site,
-                          name,
-                          argtypes,
-                          typeargtypes,
-                          site.tsym.type,
-                          bestSoFar,
-                          allowBoxing,
-                          useVarargs,
-                          operator);
+                site,
+                name,
+                argtypes,
+                typeargtypes,
+                site.tsym.type,
+                bestSoFar,
+                allowBoxing,
+                useVarargs,
+                operator);
         return bestSoFar;
     }
+
     // where
     private Symbol findMethod(Env<AttrContext> env,
                               Type site,
@@ -1661,8 +1701,8 @@ public class Resolve {
                               boolean allowBoxing,
                               boolean useVarargs,
                               boolean operator) {
-        @SuppressWarnings({"unchecked","rawtypes"})
-        List<Type>[] itypes = (List<Type>[])new List[] { List.<Type>nil(), List.<Type>nil() };
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        List<Type>[] itypes = (List<Type>[]) new List[]{List.<Type>nil(), List.<Type>nil()};
         InterfaceLookupPhase iphase = InterfaceLookupPhase.ABSTRACT_OK;
         for (TypeSymbol s : superclasses(intype)) {
             bestSoFar = findMethodInScope(env, site, name, argtypes, typeargtypes,
@@ -1690,7 +1730,7 @@ public class Resolve {
                 bestSoFar = findMethodInScope(env, site, name, argtypes, typeargtypes,
                         itype.tsym.members(), bestSoFar, allowBoxing, useVarargs, operator, true);
                 if (concrete != bestSoFar &&
-                        concrete.kind < ERR  && bestSoFar.kind < ERR &&
+                        concrete.kind < ERR && bestSoFar.kind < ERR &&
                         types.isSubSignature(concrete.type, bestSoFar.type)) {
                     //this is an hack - as javac does not do full membership checks
                     //most specific ends up comparing abstract methods that might have
@@ -1784,13 +1824,15 @@ public class Resolve {
         };
     }
 
-    /** Find unqualified method matching given name, type and value arguments.
-     *  @param env       The current environment.
-     *  @param name      The method's name.
-     *  @param argtypes  The method's value arguments.
-     *  @param typeargtypes  The method's type arguments.
-     *  @param allowBoxing Allow boxing conversions of arguments.
-     *  @param useVarargs Box trailing arguments into an array for varargs.
+    /**
+     * Find unqualified method matching given name, type and value arguments.
+     *
+     * @param env          The current environment.
+     * @param name         The method's name.
+     * @param argtypes     The method's value arguments.
+     * @param typeargtypes The method's type arguments.
+     * @param allowBoxing  Allow boxing conversions of arguments.
+     * @param useVarargs   Box trailing arguments into an array for varargs.
      */
     Symbol findFun(Env<AttrContext> env, Name name,
                    List<Type> argtypes, List<Type> typeargtypes,
@@ -1802,13 +1844,13 @@ public class Resolve {
         while (env1.outer != null) {
             if (isStatic(env1)) staticOnly = true;
             sym = findMethod(
-                env1, env1.enclClass.sym.type, name, argtypes, typeargtypes,
-                allowBoxing, useVarargs, false);
+                    env1, env1.enclClass.sym.type, name, argtypes, typeargtypes,
+                    allowBoxing, useVarargs, false);
             if (sym.exists()) {
                 if (staticOnly &&
-                    sym.kind == MTH &&
-                    sym.owner.kind == TYP &&
-                    (sym.flags() & STATIC) == 0) return new StaticError(sym);
+                        sym.kind == MTH &&
+                        sym.owner.kind == TYP &&
+                        (sym.flags() & STATIC) == 0) return new StaticError(sym);
                 else return sym;
             } else if (sym.kind < bestSoFar.kind) {
                 bestSoFar = sym;
@@ -1818,7 +1860,7 @@ public class Resolve {
         }
 
         sym = findMethod(env, syms.predefClass.type, name, argtypes,
-                         typeargtypes, allowBoxing, useVarargs, false);
+                typeargtypes, allowBoxing, useVarargs, false);
         if (sym.exists())
             return sym;
 
@@ -1832,9 +1874,9 @@ public class Resolve {
                 if (!isAccessible(env, origin, sym))
                     sym = new AccessError(env, origin, sym);
                 bestSoFar = selectBest(env, origin,
-                                       argtypes, typeargtypes,
-                                       sym, bestSoFar,
-                                       allowBoxing, useVarargs, false);
+                        argtypes, typeargtypes,
+                        sym, bestSoFar,
+                        allowBoxing, useVarargs, false);
             }
         }
         if (bestSoFar.exists())
@@ -1850,18 +1892,20 @@ public class Resolve {
                 if (!isAccessible(env, origin, sym))
                     sym = new AccessError(env, origin, sym);
                 bestSoFar = selectBest(env, origin,
-                                       argtypes, typeargtypes,
-                                       sym, bestSoFar,
-                                       allowBoxing, useVarargs, false);
+                        argtypes, typeargtypes,
+                        sym, bestSoFar,
+                        allowBoxing, useVarargs, false);
             }
         }
         return bestSoFar;
     }
 
-    /** Load toplevel or member class with given fully qualified name and
-     *  verify that it is accessible.
-     *  @param env       The current environment.
-     *  @param name      The fully qualified name of the class to be loaded.
+    /**
+     * Load toplevel or member class with given fully qualified name and
+     * verify that it is accessible.
+     *
+     * @param env  The current environment.
+     * @param name The fully qualified name of the class to be loaded.
      */
     Symbol loadClass(Env<AttrContext> env, Name name) {
         try {
@@ -1878,13 +1922,14 @@ public class Resolve {
     /**
      * Find a type declared in a scope (not inherited).  Return null
      * if none is found.
-     *  @param env       The current environment.
-     *  @param site      The original type from where the selection takes
-     *                   place.
-     *  @param name      The type's name.
-     *  @param c         The class to search for the member type. This is
-     *                   always a superclass or implemented interface of
-     *                   site's class.
+     *
+     * @param env  The current environment.
+     * @param site The original type from where the selection takes
+     *             place.
+     * @param name The type's name.
+     * @param c    The class to search for the member type. This is
+     *             always a superclass or implemented interface of
+     *             site's class.
      */
     Symbol findImmediateMemberType(Env<AttrContext> env,
                                    Type site,
@@ -1894,22 +1939,24 @@ public class Resolve {
         while (e.scope != null) {
             if (e.sym.kind == TYP) {
                 return isAccessible(env, site, e.sym)
-                    ? e.sym
-                    : new AccessError(env, site, e.sym);
+                        ? e.sym
+                        : new AccessError(env, site, e.sym);
             }
             e = e.next();
         }
         return typeNotFound;
     }
 
-    /** Find a member type inherited from a superclass or interface.
-     *  @param env       The current environment.
-     *  @param site      The original type from where the selection takes
-     *                   place.
-     *  @param name      The type's name.
-     *  @param c         The class to search for the member type. This is
-     *                   always a superclass or implemented interface of
-     *                   site's class.
+    /**
+     * Find a member type inherited from a superclass or interface.
+     *
+     * @param env  The current environment.
+     * @param site The original type from where the selection takes
+     *             place.
+     * @param name The type's name.
+     * @param c    The class to search for the member type. This is
+     *             always a superclass or implemented interface of
+     *             site's class.
      */
     Symbol findInheritedMemberType(Env<AttrContext> env,
                                    Type site,
@@ -1927,7 +1974,7 @@ public class Resolve {
              l = l.tail) {
             sym = findMemberType(env, site, name, l.head.tsym);
             if (bestSoFar.kind < AMBIGUOUS && sym.kind < AMBIGUOUS &&
-                sym.owner != bestSoFar.owner)
+                    sym.owner != bestSoFar.owner)
                 bestSoFar = new AmbiguityError(bestSoFar, sym);
             else if (sym.kind < bestSoFar.kind)
                 bestSoFar = sym;
@@ -1935,14 +1982,16 @@ public class Resolve {
         return bestSoFar;
     }
 
-    /** Find qualified member type.
-     *  @param env       The current environment.
-     *  @param site      The original type from where the selection takes
-     *                   place.
-     *  @param name      The type's name.
-     *  @param c         The class to search for the member type. This is
-     *                   always a superclass or implemented interface of
-     *                   site's class.
+    /**
+     * Find qualified member type.
+     *
+     * @param env  The current environment.
+     * @param site The original type from where the selection takes
+     *             place.
+     * @param name The type's name.
+     * @param c    The class to search for the member type. This is
+     *             always a superclass or implemented interface of
+     *             site's class.
      */
     Symbol findMemberType(Env<AttrContext> env,
                           Type site,
@@ -1957,17 +2006,19 @@ public class Resolve {
 
     }
 
-    /** Find a global type in given scope and load corresponding class.
-     *  @param env       The current environment.
-     *  @param scope     The scope in which to look for the type.
-     *  @param name      The type's name.
+    /**
+     * Find a global type in given scope and load corresponding class.
+     *
+     * @param env   The current environment.
+     * @param scope The scope in which to look for the type.
+     * @param name  The type's name.
      */
     Symbol findGlobalType(Env<AttrContext> env, Scope scope, Name name) {
         Symbol bestSoFar = typeNotFound;
         for (Scope.Entry e = scope.lookup(name); e.scope != null; e = e.next()) {
             Symbol sym = loadClass(env, e.sym.flatName());
             if (bestSoFar.kind == TYP && sym.kind == TYP &&
-                bestSoFar != sym)
+                    bestSoFar != sym)
                 return new AmbiguityError(bestSoFar, sym);
             else if (sym.kind < bestSoFar.kind)
                 bestSoFar = sym;
@@ -1981,8 +2032,8 @@ public class Resolve {
              e = e.next()) {
             if (e.sym.kind == TYP) {
                 if (staticOnly &&
-                    e.sym.type.hasTag(TYPEVAR) &&
-                    e.sym.owner.kind == TYP)
+                        e.sym.type.hasTag(TYPEVAR) &&
+                        e.sym.owner.kind == TYP)
                     return new StaticError(e.sym);
                 return e.sym;
             }
@@ -1990,9 +2041,11 @@ public class Resolve {
         return typeNotFound;
     }
 
-    /** Find an unqualified type symbol.
-     *  @param env       The current environment.
-     *  @param name      The type's name.
+    /**
+     * Find an unqualified type symbol.
+     *
+     * @param env  The current environment.
+     * @param name The type's name.
      */
     Symbol findType(Env<AttrContext> env, Name name) {
         Symbol bestSoFar = typeNotFound;
@@ -2003,14 +2056,14 @@ public class Resolve {
             // First, look for a type variable and the first member type
             final Symbol tyvar = findTypeVar(env1, name, staticOnly);
             sym = findImmediateMemberType(env1, env1.enclClass.sym.type,
-                                          name, env1.enclClass.sym);
+                    name, env1.enclClass.sym);
 
             // Return the type variable if we have it, and have no
             // immediate member, OR the type variable is for a method.
             if (tyvar != typeNotFound) {
                 if (sym == typeNotFound ||
-                    (tyvar.kind == TYP && tyvar.exists() &&
-                     tyvar.owner.kind == MTH))
+                        (tyvar.kind == TYP && tyvar.exists() &&
+                                tyvar.owner.kind == MTH))
                     return tyvar;
             }
 
@@ -2018,18 +2071,18 @@ public class Resolve {
             // otherwise, do the entire findMemberType
             if (sym == typeNotFound)
                 sym = findInheritedMemberType(env1, env1.enclClass.sym.type,
-                                              name, env1.enclClass.sym);
+                        name, env1.enclClass.sym);
 
             if (staticOnly && sym.kind == TYP &&
-                sym.type.hasTag(CLASS) &&
-                sym.type.getEnclosingType().hasTag(CLASS) &&
-                env1.enclClass.sym.type.isParameterized() &&
-                sym.type.getEnclosingType().isParameterized())
+                    sym.type.hasTag(CLASS) &&
+                    sym.type.getEnclosingType().hasTag(CLASS) &&
+                    env1.enclClass.sym.type.isParameterized() &&
+                    sym.type.getEnclosingType().isParameterized())
                 return new StaticError(sym);
             else if (sym.exists()) return sym;
             else if (sym.kind < bestSoFar.kind) bestSoFar = sym;
 
-            JCClassDecl encl = env1.baseClause ? (JCClassDecl)env1.tree : env1.enclClass;
+            JCClassDecl encl = env1.baseClause ? (JCClassDecl) env1.tree : env1.enclClass;
             if ((encl.sym.flags() & STATIC) != 0)
                 staticOnly = true;
         }
@@ -2051,11 +2104,13 @@ public class Resolve {
         return bestSoFar;
     }
 
-    /** Find an unqualified identifier which matches a specified kind set.
-     *  @param env       The current environment.
-     *  @param name      The identifier's name.
-     *  @param kind      Indicates the possible symbol kinds
-     *                   (a subset of VAL, TYP, PCK).
+    /**
+     * Find an unqualified identifier which matches a specified kind set.
+     *
+     * @param env  The current environment.
+     * @param name The identifier's name.
+     * @param kind Indicates the possible symbol kinds
+     *             (a subset of VAL, TYP, PCK).
      */
     Symbol findIdent(Env<AttrContext> env, Name name, int kind) {
         Symbol bestSoFar = typeNotFound;
@@ -2069,8 +2124,8 @@ public class Resolve {
 
         if ((kind & TYP) != 0) {
             sym = findType(env, name);
-            if (sym.kind==TYP) {
-                 reportDependence(env.enclClass.sym, sym);
+            if (sym.kind == TYP) {
+                reportDependence(env.enclClass.sym, sym);
             }
             if (sym.exists()) return sym;
             else if (sym.kind < bestSoFar.kind) bestSoFar = sym;
@@ -2080,7 +2135,9 @@ public class Resolve {
         else return bestSoFar;
     }
 
-    /** Report dependencies.
+    /**
+     * Report dependencies.
+     *
      * @param from The enclosing class sym
      * @param to   The found identifier that the class depends on.
      */
@@ -2088,11 +2145,13 @@ public class Resolve {
         // Override if you want to collect the reported dependencies.
     }
 
-    /** Find an identifier in a package which matches a specified kind set.
-     *  @param env       The current environment.
-     *  @param name      The identifier's name.
-     *  @param kind      Indicates the possible symbol kinds
-     *                   (a nonempty subset of TYP, PCK).
+    /**
+     * Find an identifier in a package which matches a specified kind set.
+     *
+     * @param env  The current environment.
+     * @param name The identifier's name.
+     * @param kind Indicates the possible symbol kinds
+     *             (a nonempty subset of TYP, PCK).
      */
     Symbol findIdentInPackage(Env<AttrContext> env, TypeSymbol pck,
                               Name name, int kind) {
@@ -2108,18 +2167,19 @@ public class Resolve {
             if (sym.exists()) {
                 // don't allow programs to use flatnames
                 if (name == sym.name) return sym;
-            }
-            else if (sym.kind < bestSoFar.kind) bestSoFar = sym;
+            } else if (sym.kind < bestSoFar.kind) bestSoFar = sym;
         }
         return (pack != null) ? pack : bestSoFar;
     }
 
-    /** Find an identifier among the members of a given type `site'.
-     *  @param env       The current environment.
-     *  @param site      The type containing the symbol to be found.
-     *  @param name      The identifier's name.
-     *  @param kind      Indicates the possible symbol kinds
-     *                   (a subset of VAL, TYP).
+    /**
+     * Find an identifier among the members of a given type `site'.
+     *
+     * @param env  The current environment.
+     * @param site The type containing the symbol to be found.
+     * @param name The identifier's name.
+     * @param kind Indicates the possible symbol kinds
+     *             (a subset of VAL, TYP).
      */
     Symbol findIdentInType(Env<AttrContext> env, Type site,
                            Name name, int kind) {
@@ -2139,41 +2199,42 @@ public class Resolve {
         return bestSoFar;
     }
 
-/* ***************************************************************************
- *  Access checking
- *  The following methods convert ResolveErrors to ErrorSymbols, issuing
- *  an error message in the process
- ****************************************************************************/
+    /* ***************************************************************************
+     *  Access checking
+     *  The following methods convert ResolveErrors to ErrorSymbols, issuing
+     *  an error message in the process
+     ****************************************************************************/
 
-    /** If `sym' is a bad symbol: report error and return errSymbol
-     *  else pass through unchanged,
-     *  additional arguments duplicate what has been used in trying to find the
-     *  symbol {@literal (--> flyweight pattern)}. This improves performance since we
-     *  expect misses to happen frequently.
+    /**
+     * If `sym' is a bad symbol: report error and return errSymbol
+     * else pass through unchanged,
+     * additional arguments duplicate what has been used in trying to find the
+     * symbol {@literal (--> flyweight pattern)}. This improves performance since we
+     * expect misses to happen frequently.
      *
-     *  @param sym       The symbol that was found, or a ResolveError.
-     *  @param pos       The position to use for error reporting.
-     *  @param location  The symbol the served as a context for this lookup
-     *  @param site      The original type from where the selection took place.
-     *  @param name      The symbol's name.
-     *  @param qualified Did we get here through a qualified expression resolution?
-     *  @param argtypes  The invocation's value arguments,
-     *                   if we looked for a method.
-     *  @param typeargtypes  The invocation's type arguments,
-     *                   if we looked for a method.
-     *  @param logResolveHelper helper class used to log resolve errors
+     * @param sym              The symbol that was found, or a ResolveError.
+     * @param pos              The position to use for error reporting.
+     * @param location         The symbol the served as a context for this lookup
+     * @param site             The original type from where the selection took place.
+     * @param name             The symbol's name.
+     * @param qualified        Did we get here through a qualified expression resolution?
+     * @param argtypes         The invocation's value arguments,
+     *                         if we looked for a method.
+     * @param typeargtypes     The invocation's type arguments,
+     *                         if we looked for a method.
+     * @param logResolveHelper helper class used to log resolve errors
      */
     Symbol accessInternal(Symbol sym,
-                  DiagnosticPosition pos,
-                  Symbol location,
-                  Type site,
-                  Name name,
-                  boolean qualified,
-                  List<Type> argtypes,
-                  List<Type> typeargtypes,
-                  LogResolveHelper logResolveHelper) {
+                          DiagnosticPosition pos,
+                          Symbol location,
+                          Type site,
+                          Name name,
+                          boolean qualified,
+                          List<Type> argtypes,
+                          List<Type> typeargtypes,
+                          LogResolveHelper logResolveHelper) {
         if (sym.kind >= AMBIGUOUS) {
-            ResolveError errSym = (ResolveError)sym;
+            ResolveError errSym = (ResolveError) sym;
             sym = errSym.access(name, qualified ? site.tsym : syms.noSymbol);
             argtypes = logResolveHelper.getArgumentTypes(errSym, sym, name, argtypes);
             if (logResolveHelper.resolveDiagnosticNeeded(site, argtypes, typeargtypes)) {
@@ -2188,25 +2249,26 @@ public class Resolve {
      * resolution diagnostics
      */
     Symbol accessMethod(Symbol sym,
-                  DiagnosticPosition pos,
-                  Symbol location,
-                  Type site,
-                  Name name,
-                  boolean qualified,
-                  List<Type> argtypes,
-                  List<Type> typeargtypes) {
+                        DiagnosticPosition pos,
+                        Symbol location,
+                        Type site,
+                        Name name,
+                        boolean qualified,
+                        List<Type> argtypes,
+                        List<Type> typeargtypes) {
         return accessInternal(sym, pos, location, site, name, qualified, argtypes, typeargtypes, methodLogResolveHelper);
     }
 
-    /** Same as original accessMethod(), but without location.
+    /**
+     * Same as original accessMethod(), but without location.
      */
     Symbol accessMethod(Symbol sym,
-                  DiagnosticPosition pos,
-                  Type site,
-                  Name name,
-                  boolean qualified,
-                  List<Type> argtypes,
-                  List<Type> typeargtypes) {
+                        DiagnosticPosition pos,
+                        Type site,
+                        Name name,
+                        boolean qualified,
+                        List<Type> argtypes,
+                        List<Type> typeargtypes) {
         return accessMethod(sym, pos, site.tsym, site, name, qualified, argtypes, typeargtypes);
     }
 
@@ -2215,26 +2277,28 @@ public class Resolve {
      * type resolution diagnostics
      */
     Symbol accessBase(Symbol sym,
-                  DiagnosticPosition pos,
-                  Symbol location,
-                  Type site,
-                  Name name,
-                  boolean qualified) {
+                      DiagnosticPosition pos,
+                      Symbol location,
+                      Type site,
+                      Name name,
+                      boolean qualified) {
         return accessInternal(sym, pos, location, site, name, qualified, List.<Type>nil(), null, basicLogResolveHelper);
     }
 
-    /** Same as original accessBase(), but without location.
+    /**
+     * Same as original accessBase(), but without location.
      */
     Symbol accessBase(Symbol sym,
-                  DiagnosticPosition pos,
-                  Type site,
-                  Name name,
-                  boolean qualified) {
+                      DiagnosticPosition pos,
+                      Type site,
+                      Name name,
+                      boolean qualified) {
         return accessBase(sym, pos, site.tsym, site, name, qualified);
     }
 
     interface LogResolveHelper {
         boolean resolveDiagnosticNeeded(Type site, List<Type> argtypes, List<Type> typeargtypes);
+
         List<Type> getArgumentTypes(ResolveError errSym, Symbol accessedSym, Name name, List<Type> argtypes);
     }
 
@@ -2242,6 +2306,7 @@ public class Resolve {
         public boolean resolveDiagnosticNeeded(Type site, List<Type> argtypes, List<Type> typeargtypes) {
             return !site.isErroneous();
         }
+
         public List<Type> getArgumentTypes(ResolveError errSym, Symbol accessedSym, Name name, List<Type> argtypes) {
             return argtypes;
         }
@@ -2250,9 +2315,10 @@ public class Resolve {
     LogResolveHelper methodLogResolveHelper = new LogResolveHelper() {
         public boolean resolveDiagnosticNeeded(Type site, List<Type> argtypes, List<Type> typeargtypes) {
             return !site.isErroneous() &&
-                        !Type.isErroneous(argtypes) &&
-                        (typeargtypes == null || !Type.isErroneous(typeargtypes));
+                    !Type.isErroneous(argtypes) &&
+                    (typeargtypes == null || !Type.isErroneous(typeargtypes));
         }
+
         public List<Type> getArgumentTypes(ResolveError errSym, Symbol accessedSym, Name name, List<Type> argtypes) {
             return (syms.operatorNames.contains(name)) ?
                     argtypes :
@@ -2283,20 +2349,22 @@ public class Resolve {
         }
     }
 
-    /** Check that sym is not an abstract method.
+    /**
+     * Check that sym is not an abstract method.
      */
     void checkNonAbstract(DiagnosticPosition pos, Symbol sym) {
         if ((sym.flags() & ABSTRACT) != 0 && (sym.flags() & DEFAULT) == 0)
             log.error(pos, "abstract.cant.be.accessed.directly",
-                      kindName(sym), sym, sym.location());
+                    kindName(sym), sym, sym.location());
     }
 
-/* ***************************************************************************
- *  Debugging
- ****************************************************************************/
+    /* ***************************************************************************
+     *  Debugging
+     ****************************************************************************/
 
-    /** print all scopes starting with scope s and proceeding outwards.
-     *  used for debugging.
+    /**
+     * print all scopes starting with scope s and proceeding outwards.
+     * used for debugging.
      */
     public void printscopes(Scope s) {
         while (s != null) {
@@ -2327,31 +2395,35 @@ public class Resolve {
         }
     }
 
-/* ***************************************************************************
- *  Name resolution
- *  Naming conventions are as for symbol lookup
- *  Unlike the find... methods these methods will report access errors
- ****************************************************************************/
+    /* ***************************************************************************
+     *  Name resolution
+     *  Naming conventions are as for symbol lookup
+     *  Unlike the find... methods these methods will report access errors
+     ****************************************************************************/
 
-    /** Resolve an unqualified (non-method) identifier.
-     *  @param pos       The position to use for error reporting.
-     *  @param env       The environment current at the identifier use.
-     *  @param name      The identifier's name.
-     *  @param kind      The set of admissible symbol kinds for the identifier.
+    /**
+     * Resolve an unqualified (non-method) identifier.
+     *
+     * @param pos  The position to use for error reporting.
+     * @param env  The environment current at the identifier use.
+     * @param name The identifier's name.
+     * @param kind The set of admissible symbol kinds for the identifier.
      */
     Symbol resolveIdent(DiagnosticPosition pos, Env<AttrContext> env,
                         Name name, int kind) {
         return accessBase(
-            findIdent(env, name, kind),
-            pos, env.enclClass.sym.type, name, false);
+                findIdent(env, name, kind),
+                pos, env.enclClass.sym.type, name, false);
     }
 
-    /** Resolve an unqualified method identifier.
-     *  @param pos       The position to use for error reporting.
-     *  @param env       The environment current at the method invocation.
-     *  @param name      The identifier's name.
-     *  @param argtypes  The types of the invocation's value arguments.
-     *  @param typeargtypes  The types of the invocation's type arguments.
+    /**
+     * Resolve an unqualified method identifier.
+     *
+     * @param pos          The position to use for error reporting.
+     * @param env          The environment current at the method invocation.
+     * @param name         The identifier's name.
+     * @param argtypes     The types of the invocation's value arguments.
+     * @param typeargtypes The types of the invocation's type arguments.
      */
     Symbol resolveMethod(DiagnosticPosition pos,
                          Env<AttrContext> env,
@@ -2365,32 +2437,37 @@ public class Resolve {
                         return findFun(env, name, argtypes, typeargtypes,
                                 phase.isBoxingRequired(),
                                 phase.isVarargsRequired());
-                    }});
+                    }
+                });
     }
 
-    /** Resolve a qualified method identifier
-     *  @param pos       The position to use for error reporting.
-     *  @param env       The environment current at the method invocation.
-     *  @param site      The type of the qualifying expression, in which
-     *                   identifier is searched.
-     *  @param name      The identifier's name.
-     *  @param argtypes  The types of the invocation's value arguments.
-     *  @param typeargtypes  The types of the invocation's type arguments.
+    /**
+     * Resolve a qualified method identifier
+     *
+     * @param pos          The position to use for error reporting.
+     * @param env          The environment current at the method invocation.
+     * @param site         The type of the qualifying expression, in which
+     *                     identifier is searched.
+     * @param name         The identifier's name.
+     * @param argtypes     The types of the invocation's value arguments.
+     * @param typeargtypes The types of the invocation's type arguments.
      */
     Symbol resolveQualifiedMethod(DiagnosticPosition pos, Env<AttrContext> env,
                                   Type site, Name name, List<Type> argtypes,
                                   List<Type> typeargtypes) {
         return resolveQualifiedMethod(pos, env, site.tsym, site, name, argtypes, typeargtypes);
     }
+
     Symbol resolveQualifiedMethod(DiagnosticPosition pos, Env<AttrContext> env,
                                   Symbol location, Type site, Name name, List<Type> argtypes,
                                   List<Type> typeargtypes) {
         return resolveQualifiedMethod(new MethodResolutionContext(), pos, env, location, site, name, argtypes, typeargtypes);
     }
+
     private Symbol resolveQualifiedMethod(MethodResolutionContext resolveContext,
-                                  DiagnosticPosition pos, Env<AttrContext> env,
-                                  Symbol location, Type site, Name name, List<Type> argtypes,
-                                  List<Type> typeargtypes) {
+                                          DiagnosticPosition pos, Env<AttrContext> env,
+                                          Symbol location, Type site, Name name, List<Type> argtypes,
+                                          List<Type> typeargtypes) {
         return lookupMethod(env, pos, location, resolveContext, new BasicLookupHelper(name, site, argtypes, typeargtypes) {
             @Override
             Symbol doLookup(Env<AttrContext> env, MethodResolutionPhase phase) {
@@ -2398,12 +2475,13 @@ public class Resolve {
                         phase.isBoxingRequired(),
                         phase.isVarargsRequired(), false);
             }
+
             @Override
             Symbol access(Env<AttrContext> env, DiagnosticPosition pos, Symbol location, Symbol sym) {
                 if (sym.kind >= AMBIGUOUS) {
                     sym = super.access(env, pos, location, sym);
                 } else if (allowMethodHandles) {
-                    MethodSymbol msym = (MethodSymbol)sym;
+                    MethodSymbol msym = (MethodSymbol) sym;
                     if ((msym.flags() & SIGNATURE_POLYMORPHIC) != 0) {
                         return findPolymorphicSignatureInstance(env, sym, argtypes);
                     }
@@ -2413,21 +2491,23 @@ public class Resolve {
         });
     }
 
-    /** Find or create an implicit method of exactly the given type (after erasure).
-     *  Searches in a side table, not the main scope of the site.
-     *  This emulates the lookup process required by JSR 292 in JVM.
-     *  @param env       Attribution environment
-     *  @param spMethod  signature polymorphic method - i.e. MH.invokeExact
-     *  @param argtypes  The required argument types
+    /**
+     * Find or create an implicit method of exactly the given type (after erasure).
+     * Searches in a side table, not the main scope of the site.
+     * This emulates the lookup process required by JSR 292 in JVM.
+     *
+     * @param env      Attribution environment
+     * @param spMethod signature polymorphic method - i.e. MH.invokeExact
+     * @param argtypes The required argument types
      */
     Symbol findPolymorphicSignatureInstance(Env<AttrContext> env,
                                             final Symbol spMethod,
                                             List<Type> argtypes) {
         Type mtype = infer.instantiatePolymorphicSignatureInstance(env,
-                (MethodSymbol)spMethod, currentResolutionContext, argtypes);
+                (MethodSymbol) spMethod, currentResolutionContext, argtypes);
         for (Symbol sym : polymorphicSignatureScope.getElementsByName(spMethod.name)) {
             if (types.isSameType(mtype, sym.type)) {
-               return sym;
+                return sym;
             }
         }
 
@@ -2443,38 +2523,42 @@ public class Resolve {
         return msym;
     }
 
-    /** Resolve a qualified method identifier, throw a fatal error if not
-     *  found.
-     *  @param pos       The position to use for error reporting.
-     *  @param env       The environment current at the method invocation.
-     *  @param site      The type of the qualifying expression, in which
-     *                   identifier is searched.
-     *  @param name      The identifier's name.
-     *  @param argtypes  The types of the invocation's value arguments.
-     *  @param typeargtypes  The types of the invocation's type arguments.
+    /**
+     * Resolve a qualified method identifier, throw a fatal error if not
+     * found.
+     *
+     * @param pos          The position to use for error reporting.
+     * @param env          The environment current at the method invocation.
+     * @param site         The type of the qualifying expression, in which
+     *                     identifier is searched.
+     * @param name         The identifier's name.
+     * @param argtypes     The types of the invocation's value arguments.
+     * @param typeargtypes The types of the invocation's type arguments.
      */
     public MethodSymbol resolveInternalMethod(DiagnosticPosition pos, Env<AttrContext> env,
-                                        Type site, Name name,
-                                        List<Type> argtypes,
-                                        List<Type> typeargtypes) {
+                                              Type site, Name name,
+                                              List<Type> argtypes,
+                                              List<Type> typeargtypes) {
         MethodResolutionContext resolveContext = new MethodResolutionContext();
         resolveContext.internalResolution = true;
         Symbol sym = resolveQualifiedMethod(resolveContext, pos, env, site.tsym,
                 site, name, argtypes, typeargtypes);
-        if (sym.kind == MTH) return (MethodSymbol)sym;
+        if (sym.kind == MTH) return (MethodSymbol) sym;
         else throw new FatalError(
-                 diags.fragment("fatal.err.cant.locate.meth",
-                                name));
+                diags.fragment("fatal.err.cant.locate.meth",
+                        name));
     }
 
-    /** Resolve constructor.
-     *  @param pos       The position to use for error reporting.
-     *  @param env       The environment current at the constructor invocation.
-     *  @param site      The type of class for which a constructor is searched.
-     *  @param argtypes  The types of the constructor invocation's value
-     *                   arguments.
-     *  @param typeargtypes  The types of the constructor invocation's type
-     *                   arguments.
+    /**
+     * Resolve constructor.
+     *
+     * @param pos          The position to use for error reporting.
+     * @param env          The environment current at the constructor invocation.
+     * @param site         The type of class for which a constructor is searched.
+     * @param argtypes     The types of the constructor invocation's value
+     *                     arguments.
+     * @param typeargtypes The types of the constructor invocation's type
+     *                     arguments.
      */
     Symbol resolveConstructor(DiagnosticPosition pos,
                               Env<AttrContext> env,
@@ -2485,11 +2569,11 @@ public class Resolve {
     }
 
     private Symbol resolveConstructor(MethodResolutionContext resolveContext,
-                              final DiagnosticPosition pos,
-                              Env<AttrContext> env,
-                              Type site,
-                              List<Type> argtypes,
-                              List<Type> typeargtypes) {
+                                      final DiagnosticPosition pos,
+                                      Env<AttrContext> env,
+                                      Type site,
+                                      List<Type> argtypes,
+                                      List<Type> typeargtypes) {
         return lookupMethod(env, pos, site.tsym, resolveContext, new BasicLookupHelper(names.init, site, argtypes, typeargtypes) {
             @Override
             Symbol doLookup(Env<AttrContext> env, MethodResolutionPhase phase) {
@@ -2500,53 +2584,57 @@ public class Resolve {
         });
     }
 
-    /** Resolve a constructor, throw a fatal error if not found.
-     *  @param pos       The position to use for error reporting.
-     *  @param env       The environment current at the method invocation.
-     *  @param site      The type to be constructed.
-     *  @param argtypes  The types of the invocation's value arguments.
-     *  @param typeargtypes  The types of the invocation's type arguments.
+    /**
+     * Resolve a constructor, throw a fatal error if not found.
+     *
+     * @param pos          The position to use for error reporting.
+     * @param env          The environment current at the method invocation.
+     * @param site         The type to be constructed.
+     * @param argtypes     The types of the invocation's value arguments.
+     * @param typeargtypes The types of the invocation's type arguments.
      */
     public MethodSymbol resolveInternalConstructor(DiagnosticPosition pos, Env<AttrContext> env,
-                                        Type site,
-                                        List<Type> argtypes,
-                                        List<Type> typeargtypes) {
+                                                   Type site,
+                                                   List<Type> argtypes,
+                                                   List<Type> typeargtypes) {
         MethodResolutionContext resolveContext = new MethodResolutionContext();
         resolveContext.internalResolution = true;
         Symbol sym = resolveConstructor(resolveContext, pos, env, site, argtypes, typeargtypes);
-        if (sym.kind == MTH) return (MethodSymbol)sym;
+        if (sym.kind == MTH) return (MethodSymbol) sym;
         else throw new FatalError(
-                 diags.fragment("fatal.err.cant.locate.ctor", site));
+                diags.fragment("fatal.err.cant.locate.ctor", site));
     }
 
     Symbol findConstructor(DiagnosticPosition pos, Env<AttrContext> env,
-                              Type site, List<Type> argtypes,
-                              List<Type> typeargtypes,
-                              boolean allowBoxing,
-                              boolean useVarargs) {
+                           Type site, List<Type> argtypes,
+                           List<Type> typeargtypes,
+                           boolean allowBoxing,
+                           boolean useVarargs) {
         Symbol sym = findMethod(env, site,
-                                    names.init, argtypes,
-                                    typeargtypes, allowBoxing,
-                                    useVarargs, false);
+                names.init, argtypes,
+                typeargtypes, allowBoxing,
+                useVarargs, false);
         chk.checkDeprecated(pos, env.info.scope.owner, sym);
         return sym;
     }
 
-    /** Resolve constructor using diamond inference.
-     *  @param pos       The position to use for error reporting.
-     *  @param env       The environment current at the constructor invocation.
-     *  @param site      The type of class for which a constructor is searched.
-     *                   The scope of this class has been touched in attribution.
-     *  @param argtypes  The types of the constructor invocation's value
-     *                   arguments.
-     *  @param typeargtypes  The types of the constructor invocation's type
-     *                   arguments.
+    /**
+     * Resolve constructor using diamond inference.
+     *
+     * @param pos          The position to use for error reporting.
+     * @param env          The environment current at the constructor invocation.
+     * @param site         The type of class for which a constructor is searched.
+     *                     The scope of this class has been touched in attribution.
+     * @param argtypes     The types of the constructor invocation's value
+     *                     arguments.
+     * @param typeargtypes The types of the constructor invocation's type
+     *                     arguments.
      */
     Symbol resolveDiamond(DiagnosticPosition pos,
-                              Env<AttrContext> env,
-                              Type site,
-                              List<Type> argtypes,
-                              List<Type> typeargtypes) {
+                          Env<AttrContext> env,
+                          Type site,
+                          List<Type> argtypes,
+                          List<Type> typeargtypes) {
         return lookupMethod(env, pos, site.tsym, resolveMethodCheck,
                 new BasicLookupHelper(names.init, site, argtypes, typeargtypes) {
                     @Override
@@ -2555,6 +2643,7 @@ public class Resolve {
                                 phase.isBoxingRequired(),
                                 phase.isVarargsRequired());
                     }
+
                     @Override
                     Symbol access(Env<AttrContext> env, DiagnosticPosition pos, Symbol location, Symbol sym) {
                         if (sym.kind >= AMBIGUOUS) {
@@ -2562,15 +2651,15 @@ public class Resolve {
                                 sym = super.access(env, pos, location, sym);
                             } else {
                                 final JCDiagnostic details = sym.kind == WRONG_MTH ?
-                                                ((InapplicableSymbolError)sym).errCandidate().snd :
-                                                null;
+                                        ((InapplicableSymbolError) sym).errCandidate().snd :
+                                        null;
                                 sym = new InapplicableSymbolError(sym.kind, "diamondError", currentResolutionContext) {
                                     @Override
                                     JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos,
-                                            Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
+                                                               Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
                                         String key = details == null ?
-                                            "cant.apply.diamond" :
-                                            "cant.apply.diamond.1";
+                                                "cant.apply.diamond" :
+                                                "cant.apply.diamond.1";
                                         return diags.create(dkind, log.currentSource(), pos, key,
                                                 diags.fragment("diamond", site.tsym), details);
                                     }
@@ -2580,23 +2669,25 @@ public class Resolve {
                             }
                         }
                         return sym;
-                    }});
+                    }
+                });
     }
 
-    /** This method scans all the constructor symbol in a given class scope -
-     *  assuming that the original scope contains a constructor of the kind:
-     *  {@code Foo(X x, Y y)}, where X,Y are class type-variables declared in Foo,
-     *  a method check is executed against the modified constructor type:
-     *  {@code <X,Y>Foo<X,Y>(X x, Y y)}. This is crucial in order to enable diamond
-     *  inference. The inferred return type of the synthetic constructor IS
-     *  the inferred type for the diamond operator.
+    /**
+     * This method scans all the constructor symbol in a given class scope -
+     * assuming that the original scope contains a constructor of the kind:
+     * {@code Foo(X x, Y y)}, where X,Y are class type-variables declared in Foo,
+     * a method check is executed against the modified constructor type:
+     * {@code <X,Y>Foo<X,Y>(X x, Y y)}. This is crucial in order to enable diamond
+     * inference. The inferred return type of the synthetic constructor IS
+     * the inferred type for the diamond operator.
      */
     private Symbol findDiamond(Env<AttrContext> env,
-                              Type site,
-                              List<Type> argtypes,
-                              List<Type> typeargtypes,
-                              boolean allowBoxing,
-                              boolean useVarargs) {
+                               Type site,
+                               List<Type> argtypes,
+                               List<Type> typeargtypes,
+                               boolean allowBoxing,
+                               boolean useVarargs) {
         Symbol bestSoFar = methodNotFound;
         for (Scope.Entry e = site.tsym.members().lookup(names.init);
              e.scope != null;
@@ -2604,36 +2695,37 @@ public class Resolve {
             final Symbol sym = e.sym;
             //- System.out.println(" e " + e.sym);
             if (sym.kind == MTH &&
-                (sym.flags_field & SYNTHETIC) == 0) {
-                    List<Type> oldParams = e.sym.type.hasTag(FORALL) ?
-                            ((ForAll)sym.type).tvars :
-                            List.<Type>nil();
-                    Type constrType = new ForAll(site.tsym.type.getTypeArguments().appendList(oldParams),
-                            types.createMethodTypeWithReturn(sym.type.asMethodType(), site));
-                    MethodSymbol newConstr = new MethodSymbol(sym.flags(), names.init, constrType, site.tsym) {
-                        @Override
-                        public Symbol baseSymbol() {
-                            return sym;
-                        }
-                    };
-                    bestSoFar = selectBest(env, site, argtypes, typeargtypes,
-                            newConstr,
-                            bestSoFar,
-                            allowBoxing,
-                            useVarargs,
-                            false);
+                    (sym.flags_field & SYNTHETIC) == 0) {
+                List<Type> oldParams = e.sym.type.hasTag(FORALL) ?
+                        ((ForAll) sym.type).tvars :
+                        List.<Type>nil();
+                Type constrType = new ForAll(site.tsym.type.getTypeArguments().appendList(oldParams),
+                        types.createMethodTypeWithReturn(sym.type.asMethodType(), site));
+                MethodSymbol newConstr = new MethodSymbol(sym.flags(), names.init, constrType, site.tsym) {
+                    @Override
+                    public Symbol baseSymbol() {
+                        return sym;
+                    }
+                };
+                bestSoFar = selectBest(env, site, argtypes, typeargtypes,
+                        newConstr,
+                        bestSoFar,
+                        allowBoxing,
+                        useVarargs,
+                        false);
             }
         }
         return bestSoFar;
     }
 
 
-
-    /** Resolve operator.
-     *  @param pos       The position to use for error reporting.
-     *  @param optag     The tag of the operation tree.
-     *  @param env       The environment current at the operation.
-     *  @param argtypes  The types of the operands.
+    /**
+     * Resolve operator.
+     *
+     * @param pos      The position to use for error reporting.
+     * @param optag    The tag of the operation tree.
+     * @param env      The environment current at the operation.
+     * @param argtypes The types of the operands.
      */
     Symbol resolveOperator(DiagnosticPosition pos, JCTree.Tag optag,
                            Env<AttrContext> env, List<Type> argtypes) {
@@ -2643,39 +2735,44 @@ public class Resolve {
             Name name = treeinfo.operatorName(optag);
             return lookupMethod(env, pos, syms.predefClass, currentResolutionContext,
                     new BasicLookupHelper(name, syms.predefClass.type, argtypes, null, BOX) {
-                @Override
-                Symbol doLookup(Env<AttrContext> env, MethodResolutionPhase phase) {
-                    return findMethod(env, site, name, argtypes, typeargtypes,
-                            phase.isBoxingRequired(),
-                            phase.isVarargsRequired(), true);
-                }
-                @Override
-                Symbol access(Env<AttrContext> env, DiagnosticPosition pos, Symbol location, Symbol sym) {
-                    return accessMethod(sym, pos, env.enclClass.sym.type, name,
-                          false, argtypes, null);
-                }
-            });
+                        @Override
+                        Symbol doLookup(Env<AttrContext> env, MethodResolutionPhase phase) {
+                            return findMethod(env, site, name, argtypes, typeargtypes,
+                                    phase.isBoxingRequired(),
+                                    phase.isVarargsRequired(), true);
+                        }
+
+                        @Override
+                        Symbol access(Env<AttrContext> env, DiagnosticPosition pos, Symbol location, Symbol sym) {
+                            return accessMethod(sym, pos, env.enclClass.sym.type, name,
+                                    false, argtypes, null);
+                        }
+                    });
         } finally {
             currentResolutionContext = prevResolutionContext;
         }
     }
 
-    /** Resolve operator.
-     *  @param pos       The position to use for error reporting.
-     *  @param optag     The tag of the operation tree.
-     *  @param env       The environment current at the operation.
-     *  @param arg       The type of the operand.
+    /**
+     * Resolve operator.
+     *
+     * @param pos   The position to use for error reporting.
+     * @param optag The tag of the operation tree.
+     * @param env   The environment current at the operation.
+     * @param arg   The type of the operand.
      */
     Symbol resolveUnaryOperator(DiagnosticPosition pos, JCTree.Tag optag, Env<AttrContext> env, Type arg) {
         return resolveOperator(pos, optag, env, List.of(arg));
     }
 
-    /** Resolve binary operator.
-     *  @param pos       The position to use for error reporting.
-     *  @param optag     The tag of the operation tree.
-     *  @param env       The environment current at the operation.
-     *  @param left      The types of the left operand.
-     *  @param right     The types of the right operand.
+    /**
+     * Resolve binary operator.
+     *
+     * @param pos   The position to use for error reporting.
+     * @param optag The tag of the operation tree.
+     * @param env   The environment current at the operation.
+     * @param left  The types of the left operand.
+     * @param right The types of the right operand.
      */
     Symbol resolveBinaryOperator(DiagnosticPosition pos,
                                  JCTree.Tag optag,
@@ -2686,10 +2783,10 @@ public class Resolve {
     }
 
     Symbol getMemberReference(DiagnosticPosition pos,
-            Env<AttrContext> env,
-            JCMemberReference referenceTree,
-            Type site,
-            Name name) {
+                              Env<AttrContext> env,
+                              JCMemberReference referenceTree,
+                              Type site,
+                              Name name) {
 
         site = types.capture(site);
 
@@ -2706,11 +2803,11 @@ public class Resolve {
     }
 
     ReferenceLookupHelper makeReferenceLookupHelper(JCMemberReference referenceTree,
-                                  Type site,
-                                  Name name,
-                                  List<Type> argtypes,
-                                  List<Type> typeargtypes,
-                                  MethodResolutionPhase maxPhase) {
+                                                    Type site,
+                                                    Name name,
+                                                    List<Type> argtypes,
+                                                    List<Type> typeargtypes,
+                                                    MethodResolutionPhase maxPhase) {
         ReferenceLookupHelper result;
         if (!name.equals(names.init)) {
             //method reference
@@ -2731,11 +2828,11 @@ public class Resolve {
     }
 
     Symbol resolveMemberReferenceByArity(Env<AttrContext> env,
-                                  JCMemberReference referenceTree,
-                                  Type site,
-                                  Name name,
-                                  List<Type> argtypes,
-                                  InferenceContext inferenceContext) {
+                                         JCMemberReference referenceTree,
+                                         Type site,
+                                         Name name,
+                                         List<Type> argtypes,
+                                         InferenceContext inferenceContext) {
 
         boolean isStaticSelector = TreeInfo.isStaticSelector(referenceTree.expr, names);
         site = types.capture(site);
@@ -2747,9 +2844,9 @@ public class Resolve {
         Symbol boundSym = lookupMethod(boundEnv, env.tree.pos(), site.tsym,
                 arityMethodCheck, boundLookupHelper);
         if (isStaticSelector &&
-            !name.equals(names.init) &&
-            !boundSym.isStatic() &&
-            boundSym.kind < ERRONEOUS) {
+                !name.equals(names.init) &&
+                !boundSym.isStatic() &&
+                boundSym.kind < ERRONEOUS) {
             boundSym = methodNotFound;
         }
 
@@ -2762,7 +2859,7 @@ public class Resolve {
             unboundSym = lookupMethod(unboundEnv, env.tree.pos(), site.tsym,
                     arityMethodCheck, unboundLookupHelper);
             if (unboundSym.isStatic() &&
-                unboundSym.kind < ERRONEOUS) {
+                    unboundSym.kind < ERRONEOUS) {
                 unboundSym = methodNotFound;
             }
         }
@@ -2780,12 +2877,12 @@ public class Resolve {
      * Resolution of member references is typically done as a single
      * overload resolution step, where the argument types A are inferred from
      * the target functional descriptor.
-     *
+     * <p>
      * If the member reference is a method reference with a type qualifier,
      * a two-step lookup process is performed. The first step uses the
      * expected argument list A, while the second step discards the first
      * type from A (which is treated as a receiver type).
-     *
+     * <p>
      * There are two cases in which inference is performed: (i) if the member
      * reference is a constructor reference and the qualifier type is raw - in
      * which case diamond inference is used to infer a parameterization for the
@@ -2793,24 +2890,24 @@ public class Resolve {
      * where the type qualifier is raw - in that case, during the unbound lookup
      * the receiver argument type is used to infer an instantiation for the raw
      * qualifier type.
-     *
+     * <p>
      * When a multi-step resolution process is exploited, it is an error
      * if two candidates are found (ambiguity).
-     *
+     * <p>
      * This routine returns a pair (T,S), where S is the member reference symbol,
      * and T is the type of the class in which S is defined. This is necessary as
      * the type T might be dynamically inferred (i.e. if constructor reference
      * has a raw qualifier).
      */
     Pair<Symbol, ReferenceLookupHelper> resolveMemberReference(Env<AttrContext> env,
-                                  JCMemberReference referenceTree,
-                                  Type site,
-                                  Name name,
-                                  List<Type> argtypes,
-                                  List<Type> typeargtypes,
-                                  MethodCheck methodCheck,
-                                  InferenceContext inferenceContext,
-                                  AttrMode mode) {
+                                                               JCMemberReference referenceTree,
+                                                               Type site,
+                                                               Name name,
+                                                               List<Type> argtypes,
+                                                               List<Type> typeargtypes,
+                                                               MethodCheck methodCheck,
+                                                               InferenceContext inferenceContext,
+                                                               AttrMode mode) {
 
         site = types.capture(site);
         ReferenceLookupHelper boundLookupHelper = makeReferenceLookupHelper(
@@ -2909,9 +3006,9 @@ public class Resolve {
                 }
             }
             log.error(referenceTree.expr.pos(), "invalid.mref",
-                Kinds.kindName(referenceTree.getMode()),
-                diags.fragment(errorFragmentToPrint,
-                Kinds.kindName(symToPrint), symToPrint));
+                    Kinds.kindName(referenceTree.getMode()),
+                    diags.fragment(errorFragmentToPrint,
+                            Kinds.kindName(symToPrint), symToPrint));
         }
         res = new Pair<>(bestSym,
                 bestSym == unboundSym ? unboundLookupHelper : boundLookupHelper);
@@ -2930,11 +3027,11 @@ public class Resolve {
     }
 
     boolean hasAnotherApplicableMethod(MethodResolutionContext resolutionContext,
-            Symbol bestSoFar, boolean staticMth) {
+                                       Symbol bestSoFar, boolean staticMth) {
         for (Candidate c : resolutionContext.candidates) {
             if (resolutionContext.step != c.step ||
-                !c.isApplicable() ||
-                c.sym == bestSoFar) {
+                    !c.isApplicable() ||
+                    c.sym == bestSoFar) {
                 continue;
             } else {
                 if (c.sym.isStatic() == staticMth) {
@@ -2946,43 +3043,43 @@ public class Resolve {
     }
 
     //where
-        private Symbol choose(Symbol boundSym, Symbol unboundSym) {
-            if (lookupSuccess(boundSym) && lookupSuccess(unboundSym)) {
-                return ambiguityError(boundSym, unboundSym);
-            } else if (lookupSuccess(boundSym) ||
-                    (canIgnore(unboundSym) && !canIgnore(boundSym))) {
-                return boundSym;
-            } else if (lookupSuccess(unboundSym) ||
-                    (canIgnore(boundSym) && !canIgnore(unboundSym))) {
-                return unboundSym;
-            } else {
-                return boundSym;
-            }
+    private Symbol choose(Symbol boundSym, Symbol unboundSym) {
+        if (lookupSuccess(boundSym) && lookupSuccess(unboundSym)) {
+            return ambiguityError(boundSym, unboundSym);
+        } else if (lookupSuccess(boundSym) ||
+                (canIgnore(unboundSym) && !canIgnore(boundSym))) {
+            return boundSym;
+        } else if (lookupSuccess(unboundSym) ||
+                (canIgnore(boundSym) && !canIgnore(unboundSym))) {
+            return unboundSym;
+        } else {
+            return boundSym;
         }
+    }
 
-        private boolean lookupSuccess(Symbol s) {
-            return s.kind == MTH || s.kind == AMBIGUOUS;
-        }
+    private boolean lookupSuccess(Symbol s) {
+        return s.kind == MTH || s.kind == AMBIGUOUS;
+    }
 
-        private boolean canIgnore(Symbol s) {
-            switch (s.kind) {
-                case ABSENT_MTH:
-                    return true;
-                case WRONG_MTH:
-                    InapplicableSymbolError errSym =
-                            (InapplicableSymbolError)s;
-                    return new Template(MethodCheckDiag.ARITY_MISMATCH.regex())
-                            .matches(errSym.errCandidate().snd);
-                case WRONG_MTHS:
-                    InapplicableSymbolsError errSyms =
-                            (InapplicableSymbolsError)s;
-                    return errSyms.filterCandidates(errSyms.mapCandidates()).isEmpty();
-                case WRONG_STATICNESS:
-                    return false;
-                default:
-                    return false;
-            }
+    private boolean canIgnore(Symbol s) {
+        switch (s.kind) {
+            case ABSENT_MTH:
+                return true;
+            case WRONG_MTH:
+                InapplicableSymbolError errSym =
+                        (InapplicableSymbolError) s;
+                return new Template(MethodCheckDiag.ARITY_MISMATCH.regex())
+                        .matches(errSym.errCandidate().snd);
+            case WRONG_MTHS:
+                InapplicableSymbolsError errSyms =
+                        (InapplicableSymbolsError) s;
+                return errSyms.filterCandidates(errSyms.mapCandidates()).isEmpty();
+            case WRONG_STATICNESS:
+                return false;
+            default:
+                return false;
         }
+    }
 
     /**
      * Helper for defining custom method-like lookup logic; a lookup helper
@@ -2991,19 +3088,29 @@ public class Resolve {
      */
     abstract class LookupHelper {
 
-        /** name of the symbol to lookup */
+        /**
+         * name of the symbol to lookup
+         */
         Name name;
 
-        /** location in which the lookup takes place */
+        /**
+         * location in which the lookup takes place
+         */
         Type site;
 
-        /** actual types used during the lookup */
+        /**
+         * actual types used during the lookup
+         */
         List<Type> argtypes;
 
-        /** type arguments used during the lookup */
+        /**
+         * type arguments used during the lookup
+         */
         List<Type> typeargtypes;
 
-        /** Max overload resolution phase handled by this helper */
+        /**
+         * Max overload resolution phase handled by this helper
+         */
         MethodResolutionPhase maxPhase;
 
         LookupHelper(Name name, Type site, List<Type> argtypes, List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
@@ -3055,7 +3162,7 @@ public class Resolve {
         final Symbol lookup(Env<AttrContext> env, MethodResolutionPhase phase) {
             Symbol sym = doLookup(env, phase);
             if (sym.kind == AMBIGUOUS) {
-                AmbiguityError a_err = (AmbiguityError)sym.baseSymbol();
+                AmbiguityError a_err = (AmbiguityError) sym.baseSymbol();
                 sym = a_err.mergeAbstracts(site);
             }
             return sym;
@@ -3086,11 +3193,13 @@ public class Resolve {
      */
     abstract class ReferenceLookupHelper extends LookupHelper {
 
-        /** The member reference tree */
+        /**
+         * The member reference tree
+         */
         JCMemberReference referenceTree;
 
         ReferenceLookupHelper(JCMemberReference referenceTree, Name name, Type site,
-                List<Type> argtypes, List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
+                              List<Type> argtypes, List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
             super(name, site, argtypes, typeargtypes, maxPhase);
             this.referenceTree = referenceTree;
         }
@@ -3106,10 +3215,12 @@ public class Resolve {
                 ReferenceLookupHelper unboundLookup(InferenceContext inferenceContext) {
                     return this;
                 }
+
                 @Override
                 Symbol lookup(Env<AttrContext> env, MethodResolutionPhase phase) {
                     return methodNotFound;
                 }
+
                 @Override
                 ReferenceKind referenceKind(Symbol sym) {
                     Assert.error();
@@ -3125,7 +3236,7 @@ public class Resolve {
 
         Symbol access(Env<AttrContext> env, DiagnosticPosition pos, Symbol location, Symbol sym) {
             if (sym.kind == AMBIGUOUS) {
-                AmbiguityError a_err = (AmbiguityError)sym.baseSymbol();
+                AmbiguityError a_err = (AmbiguityError) sym.baseSymbol();
                 sym = a_err.mergeAbstracts(site);
             }
             //skip error reporting
@@ -3142,7 +3253,7 @@ public class Resolve {
     class MethodReferenceLookupHelper extends ReferenceLookupHelper {
 
         MethodReferenceLookupHelper(JCMemberReference referenceTree, Name name, Type site,
-                List<Type> argtypes, List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
+                                    List<Type> argtypes, List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
             super(referenceTree, name, site, argtypes, typeargtypes, maxPhase);
         }
 
@@ -3157,7 +3268,7 @@ public class Resolve {
             if (TreeInfo.isStaticSelector(referenceTree.expr, names) &&
                     argtypes.nonEmpty() &&
                     (argtypes.head.hasTag(NONE) ||
-                    types.isSubtypeUnchecked(inferenceContext.asFree(argtypes.head), site))) {
+                            types.isSubtypeUnchecked(inferenceContext.asFree(argtypes.head), site))) {
                 return new UnboundMethodReferenceLookupHelper(referenceTree, name,
                         site, argtypes, typeargtypes, maxPhase);
             } else {
@@ -3188,7 +3299,7 @@ public class Resolve {
     class UnboundMethodReferenceLookupHelper extends MethodReferenceLookupHelper {
 
         UnboundMethodReferenceLookupHelper(JCMemberReference referenceTree, Name name, Type site,
-                List<Type> argtypes, List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
+                                           List<Type> argtypes, List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
             super(referenceTree, name, site, argtypes.tail, typeargtypes, maxPhase);
             if (site.isRaw() && !argtypes.head.hasTag(NONE)) {
                 Type asSuperSite = types.asSuper(argtypes.head, site.tsym);
@@ -3215,7 +3326,7 @@ public class Resolve {
     class ArrayConstructorReferenceLookupHelper extends ReferenceLookupHelper {
 
         ArrayConstructorReferenceLookupHelper(JCMemberReference referenceTree, Type site, List<Type> argtypes,
-                List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
+                                              List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
             super(referenceTree, names.init, site, argtypes, typeargtypes, maxPhase);
         }
 
@@ -3247,7 +3358,7 @@ public class Resolve {
         boolean needsInference;
 
         ConstructorReferenceLookupHelper(JCMemberReference referenceTree, Type site, List<Type> argtypes,
-                List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
+                                         List<Type> typeargtypes, MethodResolutionPhase maxPhase) {
             super(referenceTree, names.init, site, argtypes, typeargtypes, maxPhase);
             if (site.isRaw()) {
                 this.site = new ClassType(site.getEnclosingType(), site.tsym.type.getTypeArguments(), site.tsym);
@@ -3258,19 +3369,19 @@ public class Resolve {
         @Override
         protected Symbol lookup(Env<AttrContext> env, MethodResolutionPhase phase) {
             Symbol sym = needsInference ?
-                findDiamond(env, site, argtypes, typeargtypes, phase.isBoxingRequired(), phase.isVarargsRequired()) :
-                findMethod(env, site, name, argtypes, typeargtypes,
-                        phase.isBoxingRequired(), phase.isVarargsRequired(), syms.operatorNames.contains(name));
+                    findDiamond(env, site, argtypes, typeargtypes, phase.isBoxingRequired(), phase.isVarargsRequired()) :
+                    findMethod(env, site, name, argtypes, typeargtypes,
+                            phase.isBoxingRequired(), phase.isVarargsRequired(), syms.operatorNames.contains(name));
             return sym.kind != MTH ||
-                          site.getEnclosingType().hasTag(NONE) ||
-                          hasEnclosingInstance(env, site) ?
-                          sym : new InvalidSymbolError(Kinds.MISSING_ENCL, sym, null) {
-                    @Override
-                    JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
-                       return diags.create(dkind, log.currentSource(), pos,
+                    site.getEnclosingType().hasTag(NONE) ||
+                    hasEnclosingInstance(env, site) ?
+                    sym : new InvalidSymbolError(Kinds.MISSING_ENCL, sym, null) {
+                @Override
+                JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
+                    return diags.create(dkind, log.currentSource(), pos,
                             "cant.access.inner.cls.constr", site.tsym.name, argtypes, site.getEnclosingType());
-                    }
-                };
+                }
+            };
         }
 
         @Override
@@ -3293,7 +3404,7 @@ public class Resolve {
     }
 
     Symbol lookupMethod(Env<AttrContext> env, DiagnosticPosition pos, Symbol location,
-            MethodResolutionContext resolveContext, LookupHelper lookupHelper) {
+                        MethodResolutionContext resolveContext, LookupHelper lookupHelper) {
         MethodResolutionContext prevResolutionContext = currentResolutionContext;
         try {
             Symbol bestSoFar = methodNotFound;
@@ -3317,10 +3428,11 @@ public class Resolve {
 
     /**
      * Resolve `c.name' where name == this or name == super.
-     * @param pos           The position to use for error reporting.
-     * @param env           The environment current at the expression.
-     * @param c             The qualifier.
-     * @param name          The identifier's name.
+     *
+     * @param pos  The position to use for error reporting.
+     * @param env  The environment current at the expression.
+     * @param c    The qualifier.
+     * @param name The identifier's name.
      */
     Symbol resolveSelf(DiagnosticPosition pos,
                        Env<AttrContext> env,
@@ -3335,7 +3447,7 @@ public class Resolve {
                 if (sym != null) {
                     if (staticOnly) sym = new StaticError(sym);
                     return accessBase(sym, pos, env.enclClass.sym.type,
-                                  name, true);
+                            name, true);
                 }
             }
             if ((env1.enclClass.sym.flags() & STATIC) != 0) staticOnly = true;
@@ -3365,6 +3477,7 @@ public class Resolve {
         log.error(pos, "not.encl.class", c);
         return syms.errSymbol;
     }
+
     //where
     private List<Type> pruneInterfaces(Type t) {
         ListBuffer<Type> result = new ListBuffer<>();
@@ -3386,9 +3499,10 @@ public class Resolve {
     /**
      * Resolve `c.this' for an enclosing class c that contains the
      * named member.
-     * @param pos           The position to use for error reporting.
-     * @param env           The environment current at the expression.
-     * @param member        The member that must be contained in the result.
+     *
+     * @param pos    The position to use for error reporting.
+     * @param env    The environment current at the expression.
+     * @param member The member that must be contained in the result.
      */
     Symbol resolveSelfContaining(DiagnosticPosition pos,
                                  Env<AttrContext> env,
@@ -3409,8 +3523,8 @@ public class Resolve {
     }
 
     private Symbol resolveSelfContainingInternal(Env<AttrContext> env,
-                                 Symbol member,
-                                 boolean isSuperCall) {
+                                                 Symbol member,
+                                                 boolean isSuperCall) {
         Name name = names._this;
         Env<AttrContext> env1 = isSuperCall ? env.outer : env;
         boolean staticOnly = false;
@@ -3441,31 +3555,32 @@ public class Resolve {
     }
 
     Type resolveImplicitThis(DiagnosticPosition pos, Env<AttrContext> env, Type t, boolean isSuperCall) {
-        Type thisType = (((t.tsym.owner.kind & (MTH|VAR)) != 0)
-                         ? resolveSelf(pos, env, t.getEnclosingType().tsym, names._this)
-                         : resolveSelfContaining(pos, env, t.tsym, isSuperCall)).type;
+        Type thisType = (((t.tsym.owner.kind & (MTH | VAR)) != 0)
+                ? resolveSelf(pos, env, t.getEnclosingType().tsym, names._this)
+                : resolveSelfContaining(pos, env, t.tsym, isSuperCall)).type;
         if (env.info.isSelfCall && thisType.tsym == env.enclClass.sym)
             log.error(pos, "cant.ref.before.ctor.called", "this");
         return thisType;
     }
 
-/* ***************************************************************************
- *  ResolveError classes, indicating error situations when accessing symbols
- ****************************************************************************/
+    /* ***************************************************************************
+     *  ResolveError classes, indicating error situations when accessing symbols
+     ****************************************************************************/
 
     //used by TransTypes when checking target type of synthetic cast
     public void logAccessErrorInternal(Env<AttrContext> env, JCTree tree, Type type) {
         AccessError error = new AccessError(env, env.enclClass.type, type.tsym);
         logResolveError(error, tree.pos(), env.enclClass.sym, env.enclClass.type, null, null, null);
     }
+
     //where
     private void logResolveError(ResolveError error,
-            DiagnosticPosition pos,
-            Symbol location,
-            Type site,
-            Name name,
-            List<Type> argtypes,
-            List<Type> typeargtypes) {
+                                 DiagnosticPosition pos,
+                                 Symbol location,
+                                 Type site,
+                                 Name name,
+                                 List<Type> argtypes,
+                                 List<Type> typeargtypes) {
         JCDiagnostic d = error.getDiagnostic(JCDiagnostic.DiagnosticType.ERROR,
                 pos, location, site, name, argtypes, typeargtypes);
         if (d != null) {
@@ -3483,7 +3598,7 @@ public class Resolve {
             ListBuffer<Object> diagArgs = new ListBuffer<>();
             for (Type t : argtypes) {
                 if (t.hasTag(DEFERRED)) {
-                    diagArgs.append(((DeferredAttr.DeferredType)t).tree);
+                    diagArgs.append(((DeferredAttr.DeferredType) t).tree);
                 } else {
                     diagArgs.append(t);
                 }
@@ -3499,7 +3614,9 @@ public class Resolve {
      */
     abstract class ResolveError extends Symbol {
 
-        /** The name of the kind of error, for debugging only. */
+        /**
+         * The name of the kind of error, for debugging only.
+         */
         final String debugName;
 
         ResolveError(int kind, String debugName) {
@@ -3543,22 +3660,22 @@ public class Resolve {
         /**
          * Create a diagnostic representing this resolution error.
          *
-         * @param dkind     The kind of the diagnostic to be created (e.g error).
-         * @param pos       The position to be used for error reporting.
-         * @param site      The original type from where the selection took place.
-         * @param name      The name of the symbol to be resolved.
-         * @param argtypes  The invocation's value arguments,
-         *                  if we looked for a method.
-         * @param typeargtypes  The invocation's type arguments,
-         *                      if we looked for a method.
+         * @param dkind        The kind of the diagnostic to be created (e.g error).
+         * @param pos          The position to be used for error reporting.
+         * @param site         The original type from where the selection took place.
+         * @param name         The name of the symbol to be resolved.
+         * @param argtypes     The invocation's value arguments,
+         *                     if we looked for a method.
+         * @param typeargtypes The invocation's type arguments,
+         *                     if we looked for a method.
          */
         abstract JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
-                DiagnosticPosition pos,
-                Symbol location,
-                Type site,
-                Name name,
-                List<Type> argtypes,
-                List<Type> typeargtypes);
+                                            DiagnosticPosition pos,
+                                            Symbol location,
+                                            Type site,
+                                            Name name,
+                                            List<Type> argtypes,
+                                            List<Type> typeargtypes);
     }
 
     /**
@@ -3567,7 +3684,9 @@ public class Resolve {
      */
     abstract class InvalidSymbolError extends ResolveError {
 
-        /** The invalid symbol found during resolution */
+        /**
+         * The invalid symbol found during resolution
+         */
         Symbol sym;
 
         InvalidSymbolError(int kind, Symbol sym, String debugName) {
@@ -3582,7 +3701,7 @@ public class Resolve {
 
         @Override
         public String toString() {
-             return super.toString() + " wrongSym=" + sym;
+            return super.toString() + " wrongSym=" + sym;
         }
 
         @Override
@@ -3610,12 +3729,12 @@ public class Resolve {
 
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
-                DiagnosticPosition pos,
-                Symbol location,
-                Type site,
-                Name name,
-                List<Type> argtypes,
-                List<Type> typeargtypes) {
+                                   DiagnosticPosition pos,
+                                   Symbol location,
+                                   Type site,
+                                   Name name,
+                                   List<Type> argtypes,
+                                   List<Type> typeargtypes) {
             argtypes = argtypes == null ? List.<Type>nil() : argtypes;
             typeargtypes = typeargtypes == null ? List.<Type>nil() : typeargtypes;
             if (name == names.error)
@@ -3624,8 +3743,8 @@ public class Resolve {
             if (syms.operatorNames.contains(name)) {
                 boolean isUnaryOp = argtypes.size() == 1;
                 String key = argtypes.size() == 1 ?
-                    "operator.cant.be.applied" :
-                    "operator.cant.be.applied.1";
+                        "operator.cant.be.applied" :
+                        "operator.cant.be.applied.1";
                 Type first = argtypes.head;
                 Type second = !isUnaryOp ? argtypes.tail.head : null;
                 return diags.create(dkind, log.currentSource(), pos,
@@ -3638,7 +3757,7 @@ public class Resolve {
             if (!location.name.isEmpty()) {
                 if (location.kind == PCK && !site.tsym.exists()) {
                     return diags.create(dkind, log.currentSource(), pos,
-                        "doesnt.exist", location);
+                            "doesnt.exist", location);
                 }
                 hasLocation = !location.name.equals(names._this) &&
                         !location.name.equals(names._super);
@@ -3653,13 +3772,13 @@ public class Resolve {
                         errKey, kindname, idname, //symbol kindname, name
                         typeargtypes, args(argtypes), //type parameters and arguments (if any)
                         getLocationDiag(location, site)); //location kindname, type
-            }
-            else {
+            } else {
                 return diags.create(dkind, log.currentSource(), pos,
                         errKey, kindname, idname, //symbol kindname, name
                         typeargtypes, args(argtypes)); //type parameters and arguments (if any)
             }
         }
+
         //where
         private Object args(List<Type> args) {
             return args.isEmpty() ? args : methodArguments(args);
@@ -3677,17 +3796,18 @@ public class Resolve {
             }
             return key + suffix;
         }
+
         private JCDiagnostic getLocationDiag(Symbol location, Type site) {
             if (location.kind == VAR) {
                 return diags.fragment("location.1",
-                    kindName(location),
-                    location,
-                    location.type);
+                        kindName(location),
+                        location,
+                        location.type);
             } else {
                 return diags.fragment("location",
-                    typeKindName(site),
-                    site,
-                    null);
+                        typeKindName(site),
+                        site,
+                        null);
             }
         }
     }
@@ -3722,26 +3842,25 @@ public class Resolve {
 
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
-                DiagnosticPosition pos,
-                Symbol location,
-                Type site,
-                Name name,
-                List<Type> argtypes,
-                List<Type> typeargtypes) {
+                                   DiagnosticPosition pos,
+                                   Symbol location,
+                                   Type site,
+                                   Name name,
+                                   List<Type> argtypes,
+                                   List<Type> typeargtypes) {
             if (name == names.error)
                 return null;
 
             if (syms.operatorNames.contains(name)) {
                 boolean isUnaryOp = argtypes.size() == 1;
                 String key = argtypes.size() == 1 ?
-                    "operator.cant.be.applied" :
-                    "operator.cant.be.applied.1";
+                        "operator.cant.be.applied" :
+                        "operator.cant.be.applied.1";
                 Type first = argtypes.head;
                 Type second = !isUnaryOp ? argtypes.tail.head : null;
                 return diags.create(dkind, log.currentSource(), pos,
                         key, name, first, second);
-            }
-            else {
+            } else {
                 Pair<Symbol, JCDiagnostic> c = errCandidate();
                 if (compactMethodDiags) {
                     for (Map.Entry<Template, DiagnosticRewriter> _entry :
@@ -3749,7 +3868,7 @@ public class Resolve {
                         if (_entry.getKey().matches(c.snd)) {
                             JCDiagnostic simpleDiag =
                                     _entry.getValue().rewriteDiagnostic(diags, pos,
-                                        log.currentSource(), dkind, c.snd);
+                                            log.currentSource(), dkind, c.snd);
                             simpleDiag.setFlag(DiagnosticFlag.COMPRESSED);
                             return simpleDiag;
                         }
@@ -3757,14 +3876,14 @@ public class Resolve {
                 }
                 Symbol ws = c.fst.asMemberOf(site, types);
                 return diags.create(dkind, log.currentSource(), pos,
-                          "cant.apply.symbol",
-                          kindName(ws),
-                          ws.name == names.init ? ws.owner.name : ws.name,
-                          methodArguments(ws.type.getParameterTypes()),
-                          methodArguments(argtypes),
-                          kindName(ws.owner),
-                          ws.owner.type,
-                          c.snd);
+                        "cant.apply.symbol",
+                        kindName(ws),
+                        ws.name == names.init ? ws.owner.name : ws.name,
+                        methodArguments(ws.type.getParameterTypes()),
+                        methodArguments(argtypes),
+                        kindName(ws.owner),
+                        ws.owner.type,
+                        c.snd);
             }
         }
 
@@ -3797,12 +3916,12 @@ public class Resolve {
 
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
-                DiagnosticPosition pos,
-                Symbol location,
-                Type site,
-                Name name,
-                List<Type> argtypes,
-                List<Type> typeargtypes) {
+                                   DiagnosticPosition pos,
+                                   Symbol location,
+                                   Type site,
+                                   Name name,
+                                   List<Type> argtypes,
+                                   List<Type> typeargtypes) {
             Map<Symbol, JCDiagnostic> candidatesMap = mapCandidates();
             Map<Symbol, JCDiagnostic> filteredCandidates = compactMethodDiags ?
                     filterCandidates(candidatesMap) :
@@ -3815,8 +3934,8 @@ public class Resolve {
                 JCDiagnostic err = diags.create(dkind,
                         null,
                         truncatedDiag ?
-                            EnumSet.of(DiagnosticFlag.COMPRESSED) :
-                            EnumSet.noneOf(DiagnosticFlag.class),
+                                EnumSet.of(DiagnosticFlag.COMPRESSED) :
+                                EnumSet.noneOf(DiagnosticFlag.class),
                         log.currentSource(),
                         pos,
                         "cant.apply.symbols",
@@ -3826,7 +3945,7 @@ public class Resolve {
                 return new JCDiagnostic.MultilineDiagnostic(err, candidateDetails(filteredCandidates, site));
             } else if (filteredCandidates.size() == 1) {
                 Map.Entry<Symbol, JCDiagnostic> _e =
-                                filteredCandidates.entrySet().iterator().next();
+                        filteredCandidates.entrySet().iterator().next();
                 final Pair<Symbol, JCDiagnostic> p = new Pair<Symbol, JCDiagnostic>(_e.getKey(), _e.getValue());
                 JCDiagnostic d = new InapplicableSymbolError(resolveContext) {
                     @Override
@@ -3834,53 +3953,54 @@ public class Resolve {
                         return p;
                     }
                 }.getDiagnostic(dkind, pos,
-                    location, site, name, argtypes, typeargtypes);
+                        location, site, name, argtypes, typeargtypes);
                 if (truncatedDiag) {
                     d.setFlag(DiagnosticFlag.COMPRESSED);
                 }
                 return d;
             } else {
                 return new SymbolNotFoundError(ABSENT_MTH).getDiagnostic(dkind, pos,
-                    location, site, name, argtypes, typeargtypes);
+                        location, site, name, argtypes, typeargtypes);
             }
         }
+
         //where
-            private Map<Symbol, JCDiagnostic> mapCandidates() {
-                Map<Symbol, JCDiagnostic> candidates = new LinkedHashMap<Symbol, JCDiagnostic>();
-                for (Candidate c : resolveContext.candidates) {
-                    if (c.isApplicable()) continue;
-                    candidates.put(c.sym, c.details);
-                }
-                return candidates;
+        private Map<Symbol, JCDiagnostic> mapCandidates() {
+            Map<Symbol, JCDiagnostic> candidates = new LinkedHashMap<Symbol, JCDiagnostic>();
+            for (Candidate c : resolveContext.candidates) {
+                if (c.isApplicable()) continue;
+                candidates.put(c.sym, c.details);
             }
+            return candidates;
+        }
 
-            Map<Symbol, JCDiagnostic> filterCandidates(Map<Symbol, JCDiagnostic> candidatesMap) {
-                Map<Symbol, JCDiagnostic> candidates = new LinkedHashMap<Symbol, JCDiagnostic>();
-                for (Map.Entry<Symbol, JCDiagnostic> _entry : candidatesMap.entrySet()) {
-                    JCDiagnostic d = _entry.getValue();
-                    if (!new Template(MethodCheckDiag.ARITY_MISMATCH.regex()).matches(d)) {
-                        candidates.put(_entry.getKey(), d);
-                    }
+        Map<Symbol, JCDiagnostic> filterCandidates(Map<Symbol, JCDiagnostic> candidatesMap) {
+            Map<Symbol, JCDiagnostic> candidates = new LinkedHashMap<Symbol, JCDiagnostic>();
+            for (Map.Entry<Symbol, JCDiagnostic> _entry : candidatesMap.entrySet()) {
+                JCDiagnostic d = _entry.getValue();
+                if (!new Template(MethodCheckDiag.ARITY_MISMATCH.regex()).matches(d)) {
+                    candidates.put(_entry.getKey(), d);
                 }
-                return candidates;
             }
+            return candidates;
+        }
 
-            private List<JCDiagnostic> candidateDetails(Map<Symbol, JCDiagnostic> candidatesMap, Type site) {
-                List<JCDiagnostic> details = List.nil();
-                for (Map.Entry<Symbol, JCDiagnostic> _entry : candidatesMap.entrySet()) {
-                    Symbol sym = _entry.getKey();
-                    JCDiagnostic detailDiag = diags.fragment("inapplicable.method",
-                            Kinds.kindName(sym),
-                            sym.location(site, types),
-                            sym.asMemberOf(site, types),
-                            _entry.getValue());
-                    details = details.prepend(detailDiag);
-                }
-                //typically members are visited in reverse order (see Scope)
-                //so we need to reverse the candidate list so that candidates
-                //conform to source order
-                return details;
+        private List<JCDiagnostic> candidateDetails(Map<Symbol, JCDiagnostic> candidatesMap, Type site) {
+            List<JCDiagnostic> details = List.nil();
+            for (Map.Entry<Symbol, JCDiagnostic> _entry : candidatesMap.entrySet()) {
+                Symbol sym = _entry.getKey();
+                JCDiagnostic detailDiag = diags.fragment("inapplicable.method",
+                        Kinds.kindName(sym),
+                        sym.location(site, types),
+                        sym.asMemberOf(site, types),
+                        _entry.getValue());
+                details = details.prepend(detailDiag);
             }
+            //typically members are visited in reverse order (see Scope)
+            //so we need to reverse the candidate list so that candidates
+            //conform to source order
+            return details;
+        }
     }
 
     /**
@@ -3911,33 +4031,30 @@ public class Resolve {
 
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
-                DiagnosticPosition pos,
-                Symbol location,
-                Type site,
-                Name name,
-                List<Type> argtypes,
-                List<Type> typeargtypes) {
+                                   DiagnosticPosition pos,
+                                   Symbol location,
+                                   Type site,
+                                   Name name,
+                                   List<Type> argtypes,
+                                   List<Type> typeargtypes) {
             if (sym.owner.type.hasTag(ERROR))
                 return null;
 
             if (sym.name == names.init && sym.owner != site.tsym) {
                 return new SymbolNotFoundError(ABSENT_MTH).getDiagnostic(dkind,
                         pos, location, site, name, argtypes, typeargtypes);
-            }
-            else if ((sym.flags() & PUBLIC) != 0
-                || (env != null && this.site != null
+            } else if ((sym.flags() & PUBLIC) != 0
+                    || (env != null && this.site != null
                     && !isAccessible(env, this.site))) {
                 return diags.create(dkind, log.currentSource(),
                         pos, "not.def.access.class.intf.cant.access",
-                    sym, sym.location());
-            }
-            else if ((sym.flags() & (PRIVATE | PROTECTED)) != 0) {
+                        sym, sym.location());
+            } else if ((sym.flags() & (PRIVATE | PROTECTED)) != 0) {
                 return diags.create(dkind, log.currentSource(),
                         pos, "report.access", sym,
                         asFlagSet(sym.flags() & (PRIVATE | PROTECTED)),
                         sym.location());
-            }
-            else {
+            } else {
                 return diags.create(dkind, log.currentSource(),
                         pos, "not.def.public.cant.access", sym, sym.location());
             }
@@ -3956,15 +4073,15 @@ public class Resolve {
 
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
-                DiagnosticPosition pos,
-                Symbol location,
-                Type site,
-                Name name,
-                List<Type> argtypes,
-                List<Type> typeargtypes) {
+                                   DiagnosticPosition pos,
+                                   Symbol location,
+                                   Type site,
+                                   Name name,
+                                   List<Type> argtypes,
+                                   List<Type> typeargtypes) {
             Symbol errSym = ((sym.kind == TYP && sym.type.hasTag(CLASS))
-                ? types.erasure(sym.type).tsym
-                : sym);
+                    ? types.erasure(sym.type).tsym
+                    : sym);
             return diags.create(dkind, log.currentSource(), pos,
                     "non-static.cant.be.ref", kindName(sym), errSym);
         }
@@ -3977,7 +4094,9 @@ public class Resolve {
      */
     class AmbiguityError extends ResolveError {
 
-        /** The other maximally specific symbol */
+        /**
+         * The other maximally specific symbol
+         */
         List<Symbol> ambiguousSyms = List.nil();
 
         @Override
@@ -3992,7 +4111,7 @@ public class Resolve {
 
         private List<Symbol> flatten(Symbol sym) {
             if (sym.kind == AMBIGUOUS) {
-                return ((AmbiguityError)sym.baseSymbol()).ambiguousSyms;
+                return ((AmbiguityError) sym.baseSymbol()).ambiguousSyms;
             } else {
                 return List.of(sym);
             }
@@ -4005,25 +4124,25 @@ public class Resolve {
 
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
-                DiagnosticPosition pos,
-                Symbol location,
-                Type site,
-                Name name,
-                List<Type> argtypes,
-                List<Type> typeargtypes) {
+                                   DiagnosticPosition pos,
+                                   Symbol location,
+                                   Type site,
+                                   Name name,
+                                   List<Type> argtypes,
+                                   List<Type> typeargtypes) {
             List<Symbol> diagSyms = ambiguousSyms.reverse();
             Symbol s1 = diagSyms.head;
             Symbol s2 = diagSyms.tail.head;
             Name sname = s1.name;
             if (sname == names.init) sname = s1.owner.name;
             return diags.create(dkind, log.currentSource(),
-                      pos, "ref.ambiguous", sname,
-                      kindName(s1),
-                      s1,
-                      s1.location(site, types),
-                      kindName(s2),
-                      s2,
-                      s2.location(site, types));
+                    pos, "ref.ambiguous", sname,
+                    kindName(s1),
+                    s1,
+                    s1.location(site, types),
+                    kindName(s2),
+                    s2,
+                    s2.location(site, types));
         }
 
         /**
@@ -4039,9 +4158,9 @@ public class Resolve {
                 for (Symbol s2 : ambiguousInOrder) {
                     Type mt2 = types.memberType(site, s2);
                     if ((s2.flags() & ABSTRACT) == 0 ||
-                        !types.overrideEquivalent(mt, mt2) ||
-                        !types.isSameTypes(s.erasure(types).getParameterTypes(),
-                                       s2.erasure(types).getParameterTypes())) {
+                            !types.overrideEquivalent(mt, mt2) ||
+                            !types.isSameTypes(s.erasure(types).getParameterTypes(),
+                                    s2.erasure(types).getParameterTypes())) {
                         //ambiguity cannot be resolved
                         return this;
                     }
@@ -4057,10 +4176,10 @@ public class Resolve {
                     //most specific return type then others
                     return (allThrown == mt.getThrownTypes()) ?
                             s : new MethodSymbol(
-                                s.flags(),
-                                s.name,
-                                types.createMethodTypeWithThrown(mt, allThrown),
-                                s.owner);
+                            s.flags(),
+                            s.name,
+                            types.createMethodTypeWithThrown(mt, allThrown),
+                            s.owner);
                 }
             }
             return this;
@@ -4124,8 +4243,8 @@ public class Resolve {
          */
         interface DiagnosticRewriter {
             JCDiagnostic rewriteDiagnostic(JCDiagnostic.Factory diags,
-                    DiagnosticPosition preferedPos, DiagnosticSource preferredSource,
-                    DiagnosticType preferredKind, JCDiagnostic d);
+                                           DiagnosticPosition preferedPos, DiagnosticSource preferredSource,
+                                           DiagnosticType preferredKind, JCDiagnostic d);
         }
 
         /**
@@ -4135,10 +4254,14 @@ public class Resolve {
          */
         static class Template {
 
-            /** regex used to match diag key */
+            /**
+             * regex used to match diag key
+             */
             String regex;
 
-            /** templates used to match diagnostic args */
+            /**
+             * templates used to match diagnostic args
+             */
             Template[] subTemplates;
 
             Template(String key, Template... subTemplates) {
@@ -4151,13 +4274,13 @@ public class Resolve {
              * all diagnostic arguments are matches by corresponding sub-templates.
              */
             boolean matches(Object o) {
-                JCDiagnostic d = (JCDiagnostic)o;
+                JCDiagnostic d = (JCDiagnostic) o;
                 Object[] args = d.getArgs();
                 if (!d.getCode().matches(regex) ||
                         subTemplates.length != d.getArgs().length) {
                     return false;
                 }
-                for (int i = 0; i < args.length ; i++) {
+                for (int i = 0; i < args.length; i++) {
                     if (!subTemplates[i].matches(args[i])) {
                         return false;
                     }
@@ -4166,7 +4289,9 @@ public class Resolve {
             }
         }
 
-        /** a dummy template that match any diagnostic argument */
+        /**
+         * a dummy template that match any diagnostic argument
+         */
         static final Template skip = new Template("") {
             @Override
             boolean matches(Object d) {
@@ -4174,7 +4299,9 @@ public class Resolve {
             }
         };
 
-        /** rewriter map used for method resolution simplification */
+        /**
+         * rewriter map used for method resolution simplification
+         */
         static final Map<Template, DiagnosticRewriter> rewriters =
                 new LinkedHashMap<Template, DiagnosticRewriter>();
 
@@ -4182,15 +4309,15 @@ public class Resolve {
             String argMismatchRegex = MethodCheckDiag.ARG_MISMATCH.regex();
             rewriters.put(new Template(argMismatchRegex, skip),
                     new DiagnosticRewriter() {
-                @Override
-                public JCDiagnostic rewriteDiagnostic(JCDiagnostic.Factory diags,
-                        DiagnosticPosition preferedPos, DiagnosticSource preferredSource,
-                        DiagnosticType preferredKind, JCDiagnostic d) {
-                    JCDiagnostic cause = (JCDiagnostic)d.getArgs()[0];
-                    return diags.create(preferredKind, preferredSource, d.getDiagnosticPosition(),
-                            "prob.found.req", cause);
-                }
-            });
+                        @Override
+                        public JCDiagnostic rewriteDiagnostic(JCDiagnostic.Factory diags,
+                                                              DiagnosticPosition preferedPos, DiagnosticSource preferredSource,
+                                                              DiagnosticType preferredKind, JCDiagnostic d) {
+                            JCDiagnostic cause = (JCDiagnostic) d.getArgs()[0];
+                            return diags.create(preferredKind, preferredSource, d.getDiagnosticPosition(),
+                                    "prob.found.req", cause);
+                        }
+                    });
         }
     }
 
@@ -4203,8 +4330,8 @@ public class Resolve {
                 switch (sym.kind) {
                     case WRONG_MTH:
                         return (bestSoFar.kind == WRONG_MTH || bestSoFar.kind == WRONG_MTHS) ?
-                            bestSoFar :
-                            sym;
+                                bestSoFar :
+                                sym;
                     case ABSENT_MTH:
                         return bestSoFar;
                     default:
@@ -4217,8 +4344,8 @@ public class Resolve {
         final boolean isVarargsRequired;
 
         MethodResolutionPhase(boolean isBoxingRequired, boolean isVarargsRequired) {
-           this.isBoxingRequired = isBoxingRequired;
-           this.isVarargsRequired = isVarargsRequired;
+            this.isBoxingRequired = isBoxingRequired;
+            this.isVarargsRequired = isVarargsRequired;
         }
 
         public boolean isBoxingRequired() {
@@ -4231,7 +4358,7 @@ public class Resolve {
 
         public boolean isApplicable(boolean boxingEnabled, boolean varargsEnabled) {
             return (varargsEnabled || !isVarargsRequired) &&
-                   (boxingEnabled || !isBoxingRequired);
+                    (boxingEnabled || !isBoxingRequired);
         }
 
         public Symbol mergeResults(Symbol prev, Symbol sym) {
@@ -4299,10 +4426,10 @@ public class Resolve {
             public boolean equals(Object o) {
                 if (o instanceof Candidate) {
                     Symbol s1 = this.sym;
-                    Symbol s2 = ((Candidate)o).sym;
-                    if  ((s1 != s2 &&
+                    Symbol s2 = ((Candidate) o).sym;
+                    if ((s1 != s2 &&
                             (s1.overrides(s2, s1.owner.type.tsym, types, false) ||
-                            (s2.overrides(s1, s2.owner.type.tsym, types, false)))) ||
+                                    (s2.overrides(s1, s2.owner.type.tsym, types, false)))) ||
                             ((s1.isConstructor() || s2.isConstructor()) && s1.owner != s2.owner))
                         return true;
                 }
