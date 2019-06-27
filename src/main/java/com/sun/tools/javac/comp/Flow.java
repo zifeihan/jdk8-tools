@@ -44,156 +44,157 @@ import static com.sun.tools.javac.code.TypeTag.BOOLEAN;
 import static com.sun.tools.javac.code.TypeTag.VOID;
 import static com.sun.tools.javac.tree.JCTree.Tag.*;
 
-/** This pass implements dataflow analysis for Java programs though
- *  different AST visitor steps. Liveness analysis (see AliveAlanyzer) checks that
- *  every statement is reachable. Exception analysis (see FlowAnalyzer) ensures that
- *  every checked exception that is thrown is declared or caught.  Definite assignment analysis
- *  (see AssignAnalyzer) ensures that each variable is assigned when used.  Definite
- *  unassignment analysis (see AssignAnalyzer) in ensures that no final variable
- *  is assigned more than once. Finally, local variable capture analysis (see CaptureAnalyzer)
- *  determines that local variables accessed within the scope of an inner class/lambda
- *  are either final or effectively-final.
+/**
+ * This pass implements dataflow analysis for Java programs though
+ * different AST visitor steps. Liveness analysis (see AliveAlanyzer) checks that
+ * every statement is reachable. Exception analysis (see FlowAnalyzer) ensures that
+ * every checked exception that is thrown is declared or caught.  Definite assignment analysis
+ * (see AssignAnalyzer) ensures that each variable is assigned when used.  Definite
+ * unassignment analysis (see AssignAnalyzer) in ensures that no final variable
+ * is assigned more than once. Finally, local variable capture analysis (see CaptureAnalyzer)
+ * determines that local variables accessed within the scope of an inner class/lambda
+ * are either final or effectively-final.
  *
- *  <p>The JLS has a number of problems in the
- *  specification of these flow analysis problems. This implementation
- *  attempts to address those issues.
+ * <p>The JLS has a number of problems in the
+ * specification of these flow analysis problems. This implementation
+ * attempts to address those issues.
  *
- *  <p>First, there is no accommodation for a finally clause that cannot
- *  complete normally. For liveness analysis, an intervening finally
- *  clause can cause a break, continue, or return not to reach its
- *  target.  For exception analysis, an intervening finally clause can
- *  cause any exception to be "caught".  For DA/DU analysis, the finally
- *  clause can prevent a transfer of control from propagating DA/DU
- *  state to the target.  In addition, code in the finally clause can
- *  affect the DA/DU status of variables.
+ * <p>First, there is no accommodation for a finally clause that cannot
+ * complete normally. For liveness analysis, an intervening finally
+ * clause can cause a break, continue, or return not to reach its
+ * target.  For exception analysis, an intervening finally clause can
+ * cause any exception to be "caught".  For DA/DU analysis, the finally
+ * clause can prevent a transfer of control from propagating DA/DU
+ * state to the target.  In addition, code in the finally clause can
+ * affect the DA/DU status of variables.
  *
- *  <p>For try statements, we introduce the idea of a variable being
- *  definitely unassigned "everywhere" in a block.  A variable V is
- *  "unassigned everywhere" in a block iff it is unassigned at the
- *  beginning of the block and there is no reachable assignment to V
- *  in the block.  An assignment V=e is reachable iff V is not DA
- *  after e.  Then we can say that V is DU at the beginning of the
- *  catch block iff V is DU everywhere in the try block.  Similarly, V
- *  is DU at the beginning of the finally block iff V is DU everywhere
- *  in the try block and in every catch block.  Specifically, the
- *  following bullet is added to 16.2.2
- *  <pre>
+ * <p>For try statements, we introduce the idea of a variable being
+ * definitely unassigned "everywhere" in a block.  A variable V is
+ * "unassigned everywhere" in a block iff it is unassigned at the
+ * beginning of the block and there is no reachable assignment to V
+ * in the block.  An assignment V=e is reachable iff V is not DA
+ * after e.  Then we can say that V is DU at the beginning of the
+ * catch block iff V is DU everywhere in the try block.  Similarly, V
+ * is DU at the beginning of the finally block iff V is DU everywhere
+ * in the try block and in every catch block.  Specifically, the
+ * following bullet is added to 16.2.2
+ * <pre>
  *      V is <em>unassigned everywhere</em> in a block if it is
  *      unassigned before the block and there is no reachable
  *      assignment to V within the block.
  *  </pre>
- *  <p>In 16.2.15, the third bullet (and all of its sub-bullets) for all
- *  try blocks is changed to
- *  <pre>
+ * <p>In 16.2.15, the third bullet (and all of its sub-bullets) for all
+ * try blocks is changed to
+ * <pre>
  *      V is definitely unassigned before a catch block iff V is
  *      definitely unassigned everywhere in the try block.
  *  </pre>
- *  <p>The last bullet (and all of its sub-bullets) for try blocks that
- *  have a finally block is changed to
- *  <pre>
+ * <p>The last bullet (and all of its sub-bullets) for try blocks that
+ * have a finally block is changed to
+ * <pre>
  *      V is definitely unassigned before the finally block iff
  *      V is definitely unassigned everywhere in the try block
  *      and everywhere in each catch block of the try statement.
  *  </pre>
- *  <p>In addition,
- *  <pre>
+ * <p>In addition,
+ * <pre>
  *      V is definitely assigned at the end of a constructor iff
  *      V is definitely assigned after the block that is the body
  *      of the constructor and V is definitely assigned at every
  *      return that can return from the constructor.
  *  </pre>
- *  <p>In addition, each continue statement with the loop as its target
- *  is treated as a jump to the end of the loop body, and "intervening"
- *  finally clauses are treated as follows: V is DA "due to the
- *  continue" iff V is DA before the continue statement or V is DA at
- *  the end of any intervening finally block.  V is DU "due to the
- *  continue" iff any intervening finally cannot complete normally or V
- *  is DU at the end of every intervening finally block.  This "due to
- *  the continue" concept is then used in the spec for the loops.
+ * <p>In addition, each continue statement with the loop as its target
+ * is treated as a jump to the end of the loop body, and "intervening"
+ * finally clauses are treated as follows: V is DA "due to the
+ * continue" iff V is DA before the continue statement or V is DA at
+ * the end of any intervening finally block.  V is DU "due to the
+ * continue" iff any intervening finally cannot complete normally or V
+ * is DU at the end of every intervening finally block.  This "due to
+ * the continue" concept is then used in the spec for the loops.
  *
- *  <p>Similarly, break statements must consider intervening finally
- *  blocks.  For liveness analysis, a break statement for which any
- *  intervening finally cannot complete normally is not considered to
- *  cause the target statement to be able to complete normally. Then
- *  we say V is DA "due to the break" iff V is DA before the break or
- *  V is DA at the end of any intervening finally block.  V is DU "due
- *  to the break" iff any intervening finally cannot complete normally
- *  or V is DU at the break and at the end of every intervening
- *  finally block.  (I suspect this latter condition can be
- *  simplified.)  This "due to the break" is then used in the spec for
- *  all statements that can be "broken".
+ * <p>Similarly, break statements must consider intervening finally
+ * blocks.  For liveness analysis, a break statement for which any
+ * intervening finally cannot complete normally is not considered to
+ * cause the target statement to be able to complete normally. Then
+ * we say V is DA "due to the break" iff V is DA before the break or
+ * V is DA at the end of any intervening finally block.  V is DU "due
+ * to the break" iff any intervening finally cannot complete normally
+ * or V is DU at the break and at the end of every intervening
+ * finally block.  (I suspect this latter condition can be
+ * simplified.)  This "due to the break" is then used in the spec for
+ * all statements that can be "broken".
  *
- *  <p>The return statement is treated similarly.  V is DA "due to a
- *  return statement" iff V is DA before the return statement or V is
- *  DA at the end of any intervening finally block.  Note that we
- *  don't have to worry about the return expression because this
- *  concept is only used for construcrors.
+ * <p>The return statement is treated similarly.  V is DA "due to a
+ * return statement" iff V is DA before the return statement or V is
+ * DA at the end of any intervening finally block.  Note that we
+ * don't have to worry about the return expression because this
+ * concept is only used for construcrors.
  *
- *  <p>There is no spec in the JLS for when a variable is definitely
- *  assigned at the end of a constructor, which is needed for final
- *  fields (8.3.1.2).  We implement the rule that V is DA at the end
- *  of the constructor iff it is DA and the end of the body of the
- *  constructor and V is DA "due to" every return of the constructor.
+ * <p>There is no spec in the JLS for when a variable is definitely
+ * assigned at the end of a constructor, which is needed for final
+ * fields (8.3.1.2).  We implement the rule that V is DA at the end
+ * of the constructor iff it is DA and the end of the body of the
+ * constructor and V is DA "due to" every return of the constructor.
  *
- *  <p>Intervening finally blocks similarly affect exception analysis.  An
- *  intervening finally that cannot complete normally allows us to ignore
- *  an otherwise uncaught exception.
+ * <p>Intervening finally blocks similarly affect exception analysis.  An
+ * intervening finally that cannot complete normally allows us to ignore
+ * an otherwise uncaught exception.
  *
- *  <p>To implement the semantics of intervening finally clauses, all
- *  nonlocal transfers (break, continue, return, throw, method call that
- *  can throw a checked exception, and a constructor invocation that can
- *  thrown a checked exception) are recorded in a queue, and removed
- *  from the queue when we complete processing the target of the
- *  nonlocal transfer.  This allows us to modify the queue in accordance
- *  with the above rules when we encounter a finally clause.  The only
- *  exception to this [no pun intended] is that checked exceptions that
- *  are known to be caught or declared to be caught in the enclosing
- *  method are not recorded in the queue, but instead are recorded in a
- *  global variable "{@code Set<Type> thrown}" that records the type of all
- *  exceptions that can be thrown.
+ * <p>To implement the semantics of intervening finally clauses, all
+ * nonlocal transfers (break, continue, return, throw, method call that
+ * can throw a checked exception, and a constructor invocation that can
+ * thrown a checked exception) are recorded in a queue, and removed
+ * from the queue when we complete processing the target of the
+ * nonlocal transfer.  This allows us to modify the queue in accordance
+ * with the above rules when we encounter a finally clause.  The only
+ * exception to this [no pun intended] is that checked exceptions that
+ * are known to be caught or declared to be caught in the enclosing
+ * method are not recorded in the queue, but instead are recorded in a
+ * global variable "{@code Set<Type> thrown}" that records the type of all
+ * exceptions that can be thrown.
  *
- *  <p>Other minor issues the treatment of members of other classes
- *  (always considered DA except that within an anonymous class
- *  constructor, where DA status from the enclosing scope is
- *  preserved), treatment of the case expression (V is DA before the
- *  case expression iff V is DA after the switch expression),
- *  treatment of variables declared in a switch block (the implied
- *  DA/DU status after the switch expression is DU and not DA for
- *  variables defined in a switch block), the treatment of boolean ?:
- *  expressions (The JLS rules only handle b and c non-boolean; the
- *  new rule is that if b and c are boolean valued, then V is
- *  (un)assigned after a?b:c when true/false iff V is (un)assigned
- *  after b when true/false and V is (un)assigned after c when
- *  true/false).
+ * <p>Other minor issues the treatment of members of other classes
+ * (always considered DA except that within an anonymous class
+ * constructor, where DA status from the enclosing scope is
+ * preserved), treatment of the case expression (V is DA before the
+ * case expression iff V is DA after the switch expression),
+ * treatment of variables declared in a switch block (the implied
+ * DA/DU status after the switch expression is DU and not DA for
+ * variables defined in a switch block), the treatment of boolean ?:
+ * expressions (The JLS rules only handle b and c non-boolean; the
+ * new rule is that if b and c are boolean valued, then V is
+ * (un)assigned after a?b:c when true/false iff V is (un)assigned
+ * after b when true/false and V is (un)assigned after c when
+ * true/false).
  *
- *  <p>There is the remaining question of what syntactic forms constitute a
- *  reference to a variable.  It is conventional to allow this.x on the
- *  left-hand-side to initialize a final instance field named x, yet
- *  this.x isn't considered a "use" when appearing on a right-hand-side
- *  in most implementations.  Should parentheses affect what is
- *  considered a variable reference?  The simplest rule would be to
- *  allow unqualified forms only, parentheses optional, and phase out
- *  support for assigning to a final field via this.x.
+ * <p>There is the remaining question of what syntactic forms constitute a
+ * reference to a variable.  It is conventional to allow this.x on the
+ * left-hand-side to initialize a final instance field named x, yet
+ * this.x isn't considered a "use" when appearing on a right-hand-side
+ * in most implementations.  Should parentheses affect what is
+ * considered a variable reference?  The simplest rule would be to
+ * allow unqualified forms only, parentheses optional, and phase out
+ * support for assigning to a final field via this.x.
  *
- *  <p><b>This is NOT part of any supported API.
- *  If you write code that depends on this, you do so at your own risk.
- *  This code and its internal interfaces are subject to change or
- *  deletion without notice.</b>
+ * <p><b>This is NOT part of any supported API.
+ * If you write code that depends on this, you do so at your own risk.
+ * This code and its internal interfaces are subject to change or
+ * deletion without notice.</b>
  */
 public class Flow {
     protected static final Context.Key<Flow> flowKey =
-        new Context.Key<Flow>();
+            new Context.Key<Flow>();
 
     private final Names names;
     private final Log log;
     private final Symtab syms;
     private final Types types;
     private final Check chk;
-    private       TreeMaker make;
+    private TreeMaker make;
     private final Resolve rs;
     private final JCDiagnostic.Factory diags;
     private Env<AttrContext> attrEnv;
-    private       Lint lint;
+    private Lint lint;
     private final boolean allowImprovedRethrowAnalysis;
     private final boolean allowImprovedCatchAnalysis;
     private final boolean allowEffectivelyFinalInInnerClasses;
@@ -301,13 +302,13 @@ public class Flow {
             BREAK(JCTree.Tag.BREAK) {
                 @Override
                 JCTree getTarget(JCTree tree) {
-                    return ((JCBreak)tree).target;
+                    return ((JCBreak) tree).target;
                 }
             },
             CONTINUE(JCTree.Tag.CONTINUE) {
                 @Override
                 JCTree getTarget(JCTree tree) {
-                    return ((JCContinue)tree).target;
+                    return ((JCContinue) tree).target;
                 }
             };
 
@@ -320,16 +321,18 @@ public class Flow {
             abstract JCTree getTarget(JCTree tree);
         }
 
-        /** The currently pending exits that go from current inner blocks
-         *  to an enclosing block, in source order.
+        /**
+         * The currently pending exits that go from current inner blocks
+         * to an enclosing block, in source order.
          */
         ListBuffer<P> pendingExits;
 
-        /** A pending exit.  These are the statements return, break, and
-         *  continue.  In addition, exception-throwing expressions or
-         *  statements are put here when not known to be caught.  This
-         *  will typically result in an error unless it is within a
-         *  try-finally whose finally block cannot complete normally.
+        /**
+         * A pending exit.  These are the statements return, break, and
+         * continue.  In addition, exception-throwing expressions or
+         * statements are put here when not known to be caught.  This
+         * will typically result in an error unless it is within a
+         * try-finally whose finally block cannot complete normally.
          */
         static class PendingExit {
             JCTree tree;
@@ -345,16 +348,20 @@ public class Flow {
 
         abstract void markDead(JCTree tree);
 
-        /** Record an outward transfer of control. */
+        /**
+         * Record an outward transfer of control.
+         */
         void recordExit(JCTree tree, P pe) {
             pendingExits.append(pe);
             markDead(tree);
         }
 
-        /** Resolve all jumps of this statement. */
+        /**
+         * Resolve all jumps of this statement.
+         */
         private boolean resolveJump(JCTree tree,
-                        ListBuffer<P> oldPendingExits,
-                        JumpKind jk) {
+                                    ListBuffer<P> oldPendingExits,
+                                    JumpKind jk) {
             boolean resolved = false;
             List<P> exits = pendingExits.toList();
             pendingExits = oldPendingExits;
@@ -371,12 +378,16 @@ public class Flow {
             return resolved;
         }
 
-        /** Resolve all continues of this statement. */
+        /**
+         * Resolve all continues of this statement.
+         */
         boolean resolveContinues(JCTree tree) {
             return resolveJump(tree, new ListBuffer<P>(), JumpKind.CONTINUE);
         }
 
-        /** Resolve all breaks of this statement. */
+        /**
+         * Resolve all breaks of this statement.
+         */
         boolean resolveBreaks(JCTree tree, ListBuffer<P> oldPendingExits) {
             return resolveJump(tree, oldPendingExits, JumpKind.BREAK);
         }
@@ -385,7 +396,7 @@ public class Flow {
         public void scan(JCTree tree) {
             if (tree != null && (
                     tree.type == null ||
-                    tree.type != Type.stuckType)) {
+                            tree.type != Type.stuckType)) {
                 super.scan(tree);
             }
         }
@@ -399,8 +410,9 @@ public class Flow {
      */
     class AliveAnalyzer extends BaseAnalyzer<BaseAnalyzer.PendingExit> {
 
-        /** A flag that indicates whether the last statement could
-         *  complete normally.
+        /**
+         * A flag that indicates whether the last statement could
+         * complete normally.
          */
         private boolean alive;
 
@@ -409,21 +421,23 @@ public class Flow {
             alive = false;
         }
 
-    /*************************************************************************
-     * Visitor methods for statements and definitions
-     *************************************************************************/
+        /*************************************************************************
+         * Visitor methods for statements and definitions
+         *************************************************************************/
 
-        /** Analyze a definition.
+        /**
+         * Analyze a definition.
          */
         void scanDef(JCTree tree) {
             scanStat(tree);
             if (tree != null && tree.hasTag(JCTree.Tag.BLOCK) && !alive) {
                 log.error(tree.pos(),
-                          "initializer.must.be.able.to.complete.normally");
+                        "initializer.must.be.able.to.complete.normally");
             }
         }
 
-        /** Analyze a statement. Check that statement is reachable.
+        /**
+         * Analyze a statement. Check that statement is reachable.
          */
         void scanStat(JCTree tree) {
             if (!alive && tree != null) {
@@ -433,7 +447,8 @@ public class Flow {
             scan(tree);
         }
 
-        /** Analyze list of statements.
+        /**
+         * Analyze list of statements.
          */
         void scanStats(List<? extends JCStatement> trees) {
             if (trees != null)
@@ -456,7 +471,7 @@ public class Flow {
                 // process all the static initializers
                 for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                     if (!l.head.hasTag(METHODDEF) &&
-                        (TreeInfo.flags(l.head) & STATIC) != 0) {
+                            (TreeInfo.flags(l.head) & STATIC) != 0) {
                         scanDef(l.head);
                     }
                 }
@@ -464,7 +479,7 @@ public class Flow {
                 // process all the instance initializers
                 for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                     if (!l.head.hasTag(METHODDEF) &&
-                        (TreeInfo.flags(l.head) & STATIC) == 0) {
+                            (TreeInfo.flags(l.head) & STATIC) == 0) {
                         scanDef(l.head);
                     }
                 }
@@ -513,7 +528,7 @@ public class Flow {
             if (tree.init != null) {
                 Lint lintPrev = lint;
                 lint = lint.augment(tree.sym);
-                try{
+                try {
                     scan(tree.init);
                 } finally {
                     lint = lintPrev;
@@ -543,7 +558,7 @@ public class Flow {
             scanStat(tree.body);
             alive |= resolveContinues(tree);
             alive = resolveBreaks(tree, prevPendingExits) ||
-                !tree.cond.type.isTrue();
+                    !tree.cond.type.isTrue();
         }
 
         public void visitForLoop(JCForLoop tree) {
@@ -560,7 +575,7 @@ public class Flow {
             alive |= resolveContinues(tree);
             scan(tree.step);
             alive = resolveBreaks(tree, prevPendingExits) ||
-                tree.cond != null && !tree.cond.type.isTrue();
+                    tree.cond != null && !tree.cond.type.isTrue();
         }
 
         public void visitForeachLoop(JCEnhancedForLoop tree) {
@@ -596,11 +611,11 @@ public class Flow {
                 scanStats(c.stats);
                 // Warn about fall-through if lint switch fallthrough enabled.
                 if (alive &&
-                    lint.isEnabled(Lint.LintCategory.FALLTHROUGH) &&
-                    c.stats.nonEmpty() && l.tail.nonEmpty())
+                        lint.isEnabled(Lint.LintCategory.FALLTHROUGH) &&
+                        c.stats.nonEmpty() && l.tail.nonEmpty())
                     log.warning(Lint.LintCategory.FALLTHROUGH,
-                                l.tail.head.pos(),
-                                "possible.fall-through.into.case");
+                            l.tail.head.pos(),
+                            "possible.fall-through.into.case");
             }
             if (!hasDefault) {
                 alive = true;
@@ -717,8 +732,7 @@ public class Flow {
                 alive = true;
                 scanStat(tree.body);
                 tree.canCompleteNormally = alive;
-            }
-            finally {
+            } finally {
                 pendingExits = prevPending;
                 alive = prevAlive;
             }
@@ -728,15 +742,17 @@ public class Flow {
             // Do nothing for TopLevel since each class is visited individually
         }
 
-    /**************************************************************************
-     * main method
-     *************************************************************************/
+        /**************************************************************************
+         * main method
+         *************************************************************************/
 
-        /** Perform definite assignment/unassignment analysis on a tree.
+        /**
+         * Perform definite assignment/unassignment analysis on a tree.
          */
         public void analyzeTree(Env<AttrContext> env, TreeMaker make) {
             analyzeTree(env, env.tree, make);
         }
+
         public void analyzeTree(Env<AttrContext> env, JCTree tree, TreeMaker make) {
             try {
                 attrEnv = env;
@@ -759,21 +775,25 @@ public class Flow {
      */
     class FlowAnalyzer extends BaseAnalyzer<FlowAnalyzer.FlowPendingExit> {
 
-        /** A flag that indicates whether the last statement could
-         *  complete normally.
+        /**
+         * A flag that indicates whether the last statement could
+         * complete normally.
          */
         HashMap<Symbol, List<Type>> preciseRethrowTypes;
 
-        /** The current class being defined.
+        /**
+         * The current class being defined.
          */
         JCClassDecl classDef;
 
-        /** The list of possibly thrown declarable exceptions.
+        /**
+         * The list of possibly thrown declarable exceptions.
          */
         List<Type> thrown;
 
-        /** The list of exceptions that are either caught or declared to be
-         *  thrown.
+        /**
+         * The list of exceptions that are either caught or declared to be
+         * thrown.
          */
         List<Type> caught;
 
@@ -794,23 +814,24 @@ public class Flow {
 
         /*-------------------- Exceptions ----------------------*/
 
-        /** Complain that pending exceptions are not caught.
+        /**
+         * Complain that pending exceptions are not caught.
          */
         void errorUncaught() {
             for (FlowPendingExit exit = pendingExits.next();
                  exit != null;
                  exit = pendingExits.next()) {
                 if (classDef != null &&
-                    classDef.pos == exit.tree.pos) {
+                        classDef.pos == exit.tree.pos) {
                     log.error(exit.tree.pos(),
                             "unreported.exception.default.constructor",
                             exit.thrown);
                 } else if (exit.tree.hasTag(VARDEF) &&
-                        ((JCVariableDecl)exit.tree).sym.isResourceVariable()) {
+                        ((JCVariableDecl) exit.tree).sym.isResourceVariable()) {
                     log.error(exit.tree.pos(),
                             "unreported.exception.implicit.close",
                             exit.thrown,
-                            ((JCVariableDecl)exit.tree).sym.name);
+                            ((JCVariableDecl) exit.tree).sym.name);
                 } else {
                     log.error(exit.tree.pos(),
                             "unreported.exception.need.to.catch.or.throw",
@@ -819,8 +840,9 @@ public class Flow {
             }
         }
 
-        /** Record that exception is potentially thrown and check that it
-         *  is caught.
+        /**
+         * Record that exception is potentially thrown and check that it
+         * is caught.
          */
         void markThrown(JCTree tree, Type exc) {
             if (!chk.isUnchecked(tree.pos(), exc)) {
@@ -831,12 +853,11 @@ public class Flow {
             }
         }
 
-    /*************************************************************************
-     * Visitor methods for statements and definitions
-     *************************************************************************/
+        /*************************************************************************
+         * Visitor methods for statements and definitions
+         *************************************************************************/
 
         /* ------------ Visitor methods for various sorts of trees -------------*/
-
         public void visitClassDef(JCClassDecl tree) {
             if (tree.sym == null) return;
 
@@ -858,7 +879,7 @@ public class Flow {
                 // process all the static initializers
                 for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                     if (!l.head.hasTag(METHODDEF) &&
-                        (TreeInfo.flags(l.head) & STATIC) != 0) {
+                            (TreeInfo.flags(l.head) & STATIC) != 0) {
                         scan(l.head);
                         errorUncaught();
                     }
@@ -871,7 +892,7 @@ public class Flow {
                     for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                         if (TreeInfo.isInitialConstructor(l.head)) {
                             List<Type> mthrown =
-                                ((JCMethodDecl) l.head).sym.type.getThrownTypes();
+                                    ((JCMethodDecl) l.head).sym.type.getThrownTypes();
                             if (firstConstructor) {
                                 caught = mthrown;
                                 firstConstructor = false;
@@ -885,7 +906,7 @@ public class Flow {
                 // process all the instance initializers
                 for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                     if (!l.head.hasTag(METHODDEF) &&
-                        (TreeInfo.flags(l.head) & STATIC) == 0) {
+                            (TreeInfo.flags(l.head) & STATIC) == 0) {
                         scan(l.head);
                         errorUncaught();
                     }
@@ -900,7 +921,7 @@ public class Flow {
                 if (tree.name == names.empty) {
                     for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                         if (TreeInfo.isInitialConstructor(l.head)) {
-                            JCMethodDecl mdef = (JCMethodDecl)l.head;
+                            JCMethodDecl mdef = (JCMethodDecl) l.head;
                             mdef.thrown = make.Types(thrown);
                             mdef.sym.type = types.createMethodTypeWithThrown(mdef.sym.type, thrown);
                         }
@@ -972,7 +993,7 @@ public class Flow {
             if (tree.init != null) {
                 Lint lintPrev = lint;
                 lint = lint.augment(tree.sym);
-                try{
+                try {
                     scan(tree.init);
                 } finally {
                     lint = lintPrev;
@@ -1052,7 +1073,7 @@ public class Flow {
             thrown = List.nil();
             for (List<JCCatch> l = tree.catchers; l.nonEmpty(); l = l.tail) {
                 List<JCExpression> subClauses = TreeInfo.isMultiCatch(l.head) ?
-                        ((JCTypeUnion)l.head.param.vartype).alternatives :
+                        ((JCTypeUnion) l.head.param.vartype).alternatives :
                         List.of(l.head.param.vartype);
                 for (JCExpression ct : subClauses) {
                     caught = chk.incl(ct.type, caught);
@@ -1073,8 +1094,8 @@ public class Flow {
             }
             for (JCTree resource : tree.resources) {
                 List<Type> closeableSupertypes = resource.type.isCompound() ?
-                    types.interfaces(resource.type).prepend(types.supertype(resource.type)) :
-                    List.of(resource.type);
+                        types.interfaces(resource.type).prepend(types.supertype(resource.type)) :
+                        List.of(resource.type);
                 for (Type sup : closeableSupertypes) {
                     if (types.asSuper(sup, syms.autoCloseableType.tsym) != null) {
                         Symbol closeMethod = rs.resolveQualifiedMethod(tree,
@@ -1094,8 +1115,8 @@ public class Flow {
             }
             scan(tree.body);
             List<Type> thrownInTry = allowImprovedCatchAnalysis ?
-                chk.union(thrown, List.of(syms.runtimeExceptionType, syms.errorType)) :
-                thrown;
+                    chk.union(thrown, List.of(syms.runtimeExceptionType, syms.errorType)) :
+                    thrown;
             thrown = thrownPrev;
             caught = caughtPrev;
 
@@ -1103,7 +1124,7 @@ public class Flow {
             for (List<JCCatch> l = tree.catchers; l.nonEmpty(); l = l.tail) {
                 JCVariableDecl param = l.head.param;
                 List<JCExpression> subClauses = TreeInfo.isMultiCatch(l.head) ?
-                        ((JCTypeUnion)l.head.param.vartype).alternatives :
+                        ((JCTypeUnion) l.head.param.vartype).alternatives :
                         List.of(l.head.param.vartype);
                 List<Type> ctypes = List.nil();
                 List<Type> rethrownTypes = chk.diff(thrownInTry, caughtInTry);
@@ -1179,11 +1200,12 @@ public class Flow {
                 }
             }
         }
+
         //where
-            private boolean isExceptionOrThrowable(Type exc) {
-                return exc.tsym == syms.throwableType.tsym ||
+        private boolean isExceptionOrThrowable(Type exc) {
+            return exc.tsym == syms.throwableType.tsym ||
                     exc.tsym == syms.exceptionType.tsym;
-            }
+        }
 
         public void visitBreak(JCBreak tree) {
             recordExit(tree, new FlowPendingExit(tree, null));
@@ -1202,15 +1224,14 @@ public class Flow {
             scan(tree.expr);
             Symbol sym = TreeInfo.symbol(tree.expr);
             if (sym != null &&
-                sym.kind == VAR &&
-                (sym.flags() & (FINAL | EFFECTIVELY_FINAL)) != 0 &&
-                preciseRethrowTypes.get(sym) != null &&
-                allowImprovedRethrowAnalysis) {
+                    sym.kind == VAR &&
+                    (sym.flags() & (FINAL | EFFECTIVELY_FINAL)) != 0 &&
+                    preciseRethrowTypes.get(sym) != null &&
+                    allowImprovedRethrowAnalysis) {
                 for (Type t : preciseRethrowTypes.get(sym)) {
                     markThrown(tree, t);
                 }
-            }
-            else {
+            } else {
                 markThrown(tree, tree.expr.type);
             }
             markDead(tree);
@@ -1226,7 +1247,7 @@ public class Flow {
         public void visitNewClass(JCNewClass tree) {
             scan(tree.encl);
             scan(tree.args);
-           // scan(tree.def);
+            // scan(tree.def);
             for (List<Type> l = tree.constructorType.getThrownTypes();
                  l.nonEmpty();
                  l = l.tail) {
@@ -1249,8 +1270,7 @@ public class Flow {
                         caught = chk.incl(l.head, caught);
                     }
                 scan(tree.def);
-            }
-            finally {
+            } finally {
                 caught = caughtPrev;
             }
         }
@@ -1294,15 +1314,17 @@ public class Flow {
             // Do nothing for TopLevel since each class is visited individually
         }
 
-    /**************************************************************************
-     * main method
-     *************************************************************************/
+        /**************************************************************************
+         * main method
+         *************************************************************************/
 
-        /** Perform definite assignment/unassignment analysis on a tree.
+        /**
+         * Perform definite assignment/unassignment analysis on a tree.
          */
         public void analyzeTree(Env<AttrContext> env, TreeMaker make) {
             analyzeTree(env, env.tree, make);
         }
+
         public void analyzeTree(Env<AttrContext> env, JCTree tree, TreeMaker make) {
             try {
                 attrEnv = env;
@@ -1327,6 +1349,7 @@ public class Flow {
     class LambdaFlowAnalyzer extends FlowAnalyzer {
         List<Type> inferredThrownTypes;
         boolean inLambda;
+
         @Override
         public void visitLambda(JCLambda tree) {
             if ((tree.type != null &&
@@ -1350,6 +1373,7 @@ public class Flow {
                 inLambda = false;
             }
         }
+
         @Override
         public void visitClassDef(JCClassDecl tree) {
             //skip
@@ -1365,62 +1389,76 @@ public class Flow {
      */
 
     public abstract static class AbstractAssignAnalyzer<P extends AbstractAssignAnalyzer.AbstractAssignPendingExit>
-        extends BaseAnalyzer<P> {
+            extends BaseAnalyzer<P> {
 
-        /** The set of definitely assigned variables.
+        /**
+         * The set of definitely assigned variables.
          */
         protected final Bits inits;
 
-        /** The set of definitely unassigned variables.
+        /**
+         * The set of definitely unassigned variables.
          */
         final Bits uninits;
 
-        /** The set of variables that are definitely unassigned everywhere
-         *  in current try block. This variable is maintained lazily; it is
-         *  updated only when something gets removed from uninits,
-         *  typically by being assigned in reachable code.  To obtain the
-         *  correct set of variables which are definitely unassigned
-         *  anywhere in current try block, intersect uninitsTry and
-         *  uninits.
+        /**
+         * The set of variables that are definitely unassigned everywhere
+         * in current try block. This variable is maintained lazily; it is
+         * updated only when something gets removed from uninits,
+         * typically by being assigned in reachable code.  To obtain the
+         * correct set of variables which are definitely unassigned
+         * anywhere in current try block, intersect uninitsTry and
+         * uninits.
          */
         final Bits uninitsTry;
 
-        /** When analyzing a condition, inits and uninits are null.
-         *  Instead we have:
+        /**
+         * When analyzing a condition, inits and uninits are null.
+         * Instead we have:
          */
         final Bits initsWhenTrue;
         final Bits initsWhenFalse;
         final Bits uninitsWhenTrue;
         final Bits uninitsWhenFalse;
 
-        /** A mapping from addresses to variable symbols.
+        /**
+         * A mapping from addresses to variable symbols.
          */
         protected JCVariableDecl[] vardecls;
 
-        /** The current class being defined.
+        /**
+         * The current class being defined.
          */
         JCClassDecl classDef;
 
-        /** The first variable sequence number in this class definition.
+        /**
+         * The first variable sequence number in this class definition.
          */
         int firstadr;
 
-        /** The next available variable sequence number.
+        /**
+         * The next available variable sequence number.
          */
         protected int nextadr;
 
-        /** The first variable sequence number in a block that can return.
+        /**
+         * The first variable sequence number in a block that can return.
          */
         protected int returnadr;
 
-        /** The list of unreferenced automatic resources.
+        /**
+         * The list of unreferenced automatic resources.
          */
         Scope unrefdResources;
 
-        /** Set when processing a loop body the second time for DU analysis. */
+        /**
+         * Set when processing a loop body the second time for DU analysis.
+         */
         FlowKind flowKind = FlowKind.NORMAL;
 
-        /** The starting position of the analysed tree */
+        /**
+         * The starting position of the analysed tree
+         */
         int startPos;
 
         final Symtab syms;
@@ -1469,20 +1507,22 @@ public class Flow {
 
         /*-------------- Processing variables ----------------------*/
 
-        /** Do we need to track init/uninit state of this symbol?
-         *  I.e. is symbol either a local or a blank final variable?
+        /**
+         * Do we need to track init/uninit state of this symbol?
+         * I.e. is symbol either a local or a blank final variable?
          */
         protected boolean trackable(VarSymbol sym) {
             return
-                sym.pos >= startPos &&
-                ((sym.owner.kind == MTH ||
-                 ((sym.flags() & (FINAL | HASINIT | PARAMETER)) == FINAL &&
-                  classDef.sym.isEnclosedBy((ClassSymbol)sym.owner))));
+                    sym.pos >= startPos &&
+                            ((sym.owner.kind == MTH ||
+                                    ((sym.flags() & (FINAL | HASINIT | PARAMETER)) == FINAL &&
+                                            classDef.sym.isEnclosedBy((ClassSymbol) sym.owner))));
         }
 
-        /** Initialize new trackable variable by setting its address field
-         *  to the next available sequence number and entering it under that
-         *  index into the vars array.
+        /**
+         * Initialize new trackable variable by setting its address field
+         * to the next available sequence number and entering it under that
+         * index into the vars array.
          */
         void newVar(JCVariableDecl varDecl) {
             VarSymbol sym = varDecl.sym;
@@ -1513,7 +1553,8 @@ public class Flow {
             inits.orSet(bits);
         }
 
-        /** Record an initialization of a trackable variable.
+        /**
+         * Record an initialization of a trackable variable.
          */
         void letInit(DiagnosticPosition pos, VarSymbol sym) {
             if (sym.adr >= firstadr && trackable(sym)) {
@@ -1523,41 +1564,46 @@ public class Flow {
                 inits.incl(sym.adr);
             }
         }
-        //where
-            void uninit(VarSymbol sym) {
-                if (!inits.isMember(sym.adr)) {
-                    // reachable assignment
-                    uninits.excl(sym.adr);
-                    uninitsTry.excl(sym.adr);
-                } else {
-                    //log.rawWarning(pos, "unreachable assignment");//DEBUG
-                    uninits.excl(sym.adr);
-                }
-            }
 
-        /** If tree is either a simple name or of the form this.name or
-         *  C.this.name, and tree represents a trackable variable,
-         *  record an initialization of the variable.
+        //where
+        void uninit(VarSymbol sym) {
+            if (!inits.isMember(sym.adr)) {
+                // reachable assignment
+                uninits.excl(sym.adr);
+                uninitsTry.excl(sym.adr);
+            } else {
+                //log.rawWarning(pos, "unreachable assignment");//DEBUG
+                uninits.excl(sym.adr);
+            }
+        }
+
+        /**
+         * If tree is either a simple name or of the form this.name or
+         * C.this.name, and tree represents a trackable variable,
+         * record an initialization of the variable.
          */
         void letInit(JCTree tree) {
             tree = TreeInfo.skipParens(tree);
             if (tree.hasTag(IDENT) || tree.hasTag(SELECT)) {
                 Symbol sym = TreeInfo.symbol(tree);
                 if (sym.kind == VAR) {
-                    letInit(tree.pos(), (VarSymbol)sym);
+                    letInit(tree.pos(), (VarSymbol) sym);
                 }
             }
         }
 
-        /** Check that trackable variable is initialized.
+        /**
+         * Check that trackable variable is initialized.
          */
         void checkInit(DiagnosticPosition pos, VarSymbol sym) {
             checkInit(pos, sym, "var.might.not.have.been.initialized");
         }
 
-        void checkInit(DiagnosticPosition pos, VarSymbol sym, String errkey) {}
+        void checkInit(DiagnosticPosition pos, VarSymbol sym, String errkey) {
+        }
 
-        /** Utility method to reset several Bits instances.
+        /**
+         * Utility method to reset several Bits instances.
          */
         private void resetBits(Bits... bits) {
             for (Bits b : bits) {
@@ -1565,7 +1611,8 @@ public class Flow {
             }
         }
 
-        /** Split (duplicate) inits/uninits into WhenTrue/WhenFalse sets
+        /**
+         * Split (duplicate) inits/uninits into WhenTrue/WhenFalse sets
          */
         void split(boolean setToNull) {
             initsWhenFalse.assign(inits);
@@ -1577,19 +1624,21 @@ public class Flow {
             }
         }
 
-        /** Merge (intersect) inits/uninits from WhenTrue/WhenFalse sets.
+        /**
+         * Merge (intersect) inits/uninits from WhenTrue/WhenFalse sets.
          */
         protected void merge(JCTree tree) {
             inits.assign(initsWhenFalse.andSet(initsWhenTrue));
             uninits.assign(uninitsWhenFalse.andSet(uninitsWhenTrue));
         }
 
-    /* ************************************************************************
-     * Visitor methods for statements and definitions
-     *************************************************************************/
+        /* ************************************************************************
+         * Visitor methods for statements and definitions
+         *************************************************************************/
 
-        /** Analyze an expression. Make sure to set (un)inits rather than
-         *  (un)initsWhenTrue(WhenFalse) on exit.
+        /**
+         * Analyze an expression. Make sure to set (un)inits rather than
+         * (un)initsWhenTrue(WhenFalse) on exit.
          */
         void scanExpr(JCTree tree) {
             if (tree != null) {
@@ -1600,7 +1649,8 @@ public class Flow {
             }
         }
 
-        /** Analyze a list of expressions.
+        /**
+         * Analyze a list of expressions.
          */
         void scanExprs(List<? extends JCExpression> trees) {
             if (trees != null)
@@ -1608,8 +1658,9 @@ public class Flow {
                     scanExpr(l.head);
         }
 
-        /** Analyze a condition. Make sure to set (un)initsWhenTrue(WhenFalse)
-         *  rather than (un)inits on exit.
+        /**
+         * Analyze a condition. Make sure to set (un)initsWhenTrue(WhenFalse)
+         * rather than (un)inits on exit.
          */
         void scanCond(JCTree tree) {
             if (tree.type.isFalse()) {
@@ -1660,7 +1711,7 @@ public class Flow {
                 // define all the static fields
                 for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                     if (l.head.hasTag(VARDEF)) {
-                        JCVariableDecl def = (JCVariableDecl)l.head;
+                        JCVariableDecl def = (JCVariableDecl) l.head;
                         if ((def.mods.flags & STATIC) != 0) {
                             VarSymbol sym = def.sym;
                             if (trackable(sym)) {
@@ -1673,7 +1724,7 @@ public class Flow {
                 // process all the static initializers
                 for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                     if (!l.head.hasTag(METHODDEF) &&
-                        (TreeInfo.flags(l.head) & STATIC) != 0) {
+                            (TreeInfo.flags(l.head) & STATIC) != 0) {
                         scan(l.head);
                     }
                 }
@@ -1681,7 +1732,7 @@ public class Flow {
                 // define all the instance fields
                 for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                     if (l.head.hasTag(VARDEF)) {
-                        JCVariableDecl def = (JCVariableDecl)l.head;
+                        JCVariableDecl def = (JCVariableDecl) l.head;
                         if ((def.mods.flags & STATIC) == 0) {
                             VarSymbol sym = def.sym;
                             if (trackable(sym)) {
@@ -1694,7 +1745,7 @@ public class Flow {
                 // process all the instance initializers
                 for (List<JCTree> l = tree.defs; l.nonEmpty(); l = l.tail) {
                     if (!l.head.hasTag(METHODDEF) &&
-                        (TreeInfo.flags(l.head) & STATIC) == 0) {
+                            (TreeInfo.flags(l.head) & STATIC) == 0) {
                         scan(l.head);
                     }
                 }
@@ -1734,7 +1785,7 @@ public class Flow {
 
             try {
                 boolean isInitialConstructor =
-                    TreeInfo.isInitialConstructor(tree);
+                        TreeInfo.isInitialConstructor(tree);
 
                 if (!isInitialConstructor) {
                     firstadr = nextadr;
@@ -1754,7 +1805,7 @@ public class Flow {
 
                 if (isInitialConstructor) {
                     boolean isSynthesized = (tree.sym.flags() &
-                                             GENERATEDCONSTR) != 0;
+                            GENERATEDCONSTR) != 0;
                     for (int i = firstadr; i < nextadr; i++) {
                         JCVariableDecl vardecl = vardecls[i];
                         VarSymbol var = vardecl.sym;
@@ -1763,7 +1814,7 @@ public class Flow {
                             // the ctor is default(synthesized) or not
                             if (isSynthesized) {
                                 checkInit(TreeInfo.diagnosticPositionFor(var, vardecl),
-                                    var, "var.not.initialized.in.default.constructor");
+                                        var, "var.not.initialized.in.default.constructor");
                             } else {
                                 checkInit(TreeInfo.diagEndPos(tree.body), var);
                             }
@@ -1795,7 +1846,7 @@ public class Flow {
         protected void initParam(JCVariableDecl def) {
             inits.incl(def.sym.adr);
             uninits.excl(def.sym.adr);
-            }
+        }
 
         public void visitVarDef(JCVariableDecl tree) {
             boolean track = trackable(tree.sym);
@@ -1838,9 +1889,9 @@ public class Flow {
                     initsSkip.assign(initsWhenFalse);
                     uninitsSkip.assign(uninitsWhenFalse);
                 }
-                if (getLogNumberOfErrors() !=  prevErrors ||
-                    flowKind.isFinal() ||
-                    new Bits(uninitsEntry).diffSet(uninitsWhenTrue).nextBit(firstadr)==-1)
+                if (getLogNumberOfErrors() != prevErrors ||
+                        flowKind.isFinal() ||
+                        new Bits(uninitsEntry).diffSet(uninitsWhenTrue).nextBit(firstadr) == -1)
                     break;
                 assignToInits(tree.cond, initsWhenTrue);
                 uninits.assign(uninitsEntry.andSet(uninitsWhenTrue));
@@ -1865,7 +1916,7 @@ public class Flow {
             do {
                 scanCond(tree.cond);
                 if (!flowKind.isFinal()) {
-                    initsSkip.assign(initsWhenFalse) ;
+                    initsSkip.assign(initsWhenFalse);
                     uninitsSkip.assign(uninitsWhenFalse);
                 }
                 assignToInits(tree, initsWhenTrue);
@@ -1873,8 +1924,8 @@ public class Flow {
                 scan(tree.body);
                 resolveContinues(tree);
                 if (getLogNumberOfErrors() != prevErrors ||
-                    flowKind.isFinal() ||
-                    new Bits(uninitsEntry).diffSet(uninits).nextBit(firstadr) == -1) {
+                        flowKind.isFinal() ||
+                        new Bits(uninitsEntry).diffSet(uninits).nextBit(firstadr) == -1) {
                     break;
                 }
                 uninits.assign(uninitsEntry.andSet(uninits));
@@ -1919,8 +1970,8 @@ public class Flow {
                 resolveContinues(tree);
                 scan(tree.step);
                 if (getLogNumberOfErrors() != prevErrors ||
-                    flowKind.isFinal() ||
-                    new Bits(uninitsEntry).diffSet(uninits).nextBit(firstadr) == -1)
+                        flowKind.isFinal() ||
+                        new Bits(uninitsEntry).diffSet(uninits).nextBit(firstadr) == -1)
                     break;
                 uninits.assign(uninitsEntry.andSet(uninits));
                 flowKind = FlowKind.SPECULATIVE_LOOP;
@@ -1954,8 +2005,8 @@ public class Flow {
                 scan(tree.body);
                 resolveContinues(tree);
                 if (getLogNumberOfErrors() != prevErrors ||
-                    flowKind.isFinal() ||
-                    new Bits(uninitsEntry).diffSet(uninits).nextBit(firstadr) == -1)
+                        flowKind.isFinal() ||
+                        new Bits(uninitsEntry).diffSet(uninits).nextBit(firstadr) == -1)
                     break;
                 uninits.assign(uninitsEntry.andSet(uninits));
                 flowKind = FlowKind.SPECULATIVE_LOOP;
@@ -2010,24 +2061,28 @@ public class Flow {
             nextadr = nextadrPrev;
         }
         // where
-            /** Add any variables defined in stats to inits and uninits. */
-            private void addVars(List<JCStatement> stats, final Bits inits,
-                                        final Bits uninits) {
-                for (;stats.nonEmpty(); stats = stats.tail) {
-                    JCTree stat = stats.head;
-                    if (stat.hasTag(VARDEF)) {
-                        int adr = ((JCVariableDecl) stat).sym.adr;
-                        inits.excl(adr);
-                        uninits.incl(adr);
-                    }
+
+        /**
+         * Add any variables defined in stats to inits and uninits.
+         */
+        private void addVars(List<JCStatement> stats, final Bits inits,
+                             final Bits uninits) {
+            for (; stats.nonEmpty(); stats = stats.tail) {
+                JCTree stat = stats.head;
+                if (stat.hasTag(VARDEF)) {
+                    int adr = ((JCVariableDecl) stat).sym.adr;
+                    inits.excl(adr);
+                    uninits.incl(adr);
                 }
             }
+        }
 
         boolean isEnabled(Lint.LintCategory lc) {
             return false;
         }
 
-        void reportWarning(Lint.LintCategory lc, DiagnosticPosition pos, String key, Object ... args) {}
+        void reportWarning(Lint.LintCategory lc, DiagnosticPosition pos, String key, Object... args) {
+        }
 
         public void visitTry(JCTry tree) {
             ListBuffer<JCVariableDecl> resourceVarDecls = new ListBuffer<>();
@@ -2059,7 +2114,7 @@ public class Flow {
                 for (JCVariableDecl resVar : resourceVarDecls) {
                     if (unrefdResources.includes(resVar.sym)) {
                         reportWarning(Lint.LintCategory.TRY, resVar.pos(),
-                                    "try.resource.not.referenced", resVar.sym);
+                                "try.resource.not.referenced", resVar.sym);
                         unrefdResources.remove(resVar.sym);
                     }
                 }
@@ -2125,7 +2180,7 @@ public class Flow {
             assignToInits(tree.cond, initsWhenTrue);
             uninits.assign(uninitsWhenTrue);
             if (tree.truepart.type.hasTag(BOOLEAN) &&
-                tree.falsepart.type.hasTag(BOOLEAN)) {
+                    tree.falsepart.type.hasTag(BOOLEAN)) {
                 // if b and c are boolean valued, then
                 // v is (un)assigned after a?b:c when true iff
                 //    v is (un)assigned after b when true and
@@ -2231,8 +2286,7 @@ public class Flow {
                 } else {
                     scan(tree.body);
                 }
-            }
-            finally {
+            } finally {
                 returnadr = returnadrPrev;
                 uninits.assign(prevUninits);
                 assignToInits(tree, prevInits);
@@ -2276,56 +2330,58 @@ public class Flow {
 
         public void visitUnary(JCUnary tree) {
             switch (tree.getTag()) {
-            case NOT:
-                scanCond(tree.arg);
-                final Bits t = new Bits(initsWhenFalse);
-                initsWhenFalse.assign(initsWhenTrue);
-                initsWhenTrue.assign(t);
-                t.assign(uninitsWhenFalse);
-                uninitsWhenFalse.assign(uninitsWhenTrue);
-                uninitsWhenTrue.assign(t);
-                break;
-            case PREINC: case POSTINC:
-            case PREDEC: case POSTDEC:
-                scanExpr(tree.arg);
-                letInit(tree.arg);
-                break;
-            default:
-                scanExpr(tree.arg);
+                case NOT:
+                    scanCond(tree.arg);
+                    final Bits t = new Bits(initsWhenFalse);
+                    initsWhenFalse.assign(initsWhenTrue);
+                    initsWhenTrue.assign(t);
+                    t.assign(uninitsWhenFalse);
+                    uninitsWhenFalse.assign(uninitsWhenTrue);
+                    uninitsWhenTrue.assign(t);
+                    break;
+                case PREINC:
+                case POSTINC:
+                case PREDEC:
+                case POSTDEC:
+                    scanExpr(tree.arg);
+                    letInit(tree.arg);
+                    break;
+                default:
+                    scanExpr(tree.arg);
             }
         }
 
         public void visitBinary(JCBinary tree) {
             switch (tree.getTag()) {
-            case AND:
-                scanCond(tree.lhs);
-                final Bits initsWhenFalseLeft = new Bits(initsWhenFalse);
-                final Bits uninitsWhenFalseLeft = new Bits(uninitsWhenFalse);
-                assignToInits(tree.lhs, initsWhenTrue);
-                uninits.assign(uninitsWhenTrue);
-                scanCond(tree.rhs);
-                initsWhenFalse.andSet(initsWhenFalseLeft);
-                uninitsWhenFalse.andSet(uninitsWhenFalseLeft);
-                break;
-            case OR:
-                scanCond(tree.lhs);
-                final Bits initsWhenTrueLeft = new Bits(initsWhenTrue);
-                final Bits uninitsWhenTrueLeft = new Bits(uninitsWhenTrue);
-                assignToInits(tree.lhs, initsWhenFalse);
-                uninits.assign(uninitsWhenFalse);
-                scanCond(tree.rhs);
-                initsWhenTrue.andSet(initsWhenTrueLeft);
-                uninitsWhenTrue.andSet(uninitsWhenTrueLeft);
-                break;
-            default:
-                scanExpr(tree.lhs);
-                scanExpr(tree.rhs);
+                case AND:
+                    scanCond(tree.lhs);
+                    final Bits initsWhenFalseLeft = new Bits(initsWhenFalse);
+                    final Bits uninitsWhenFalseLeft = new Bits(uninitsWhenFalse);
+                    assignToInits(tree.lhs, initsWhenTrue);
+                    uninits.assign(uninitsWhenTrue);
+                    scanCond(tree.rhs);
+                    initsWhenFalse.andSet(initsWhenFalseLeft);
+                    uninitsWhenFalse.andSet(uninitsWhenFalseLeft);
+                    break;
+                case OR:
+                    scanCond(tree.lhs);
+                    final Bits initsWhenTrueLeft = new Bits(initsWhenTrue);
+                    final Bits uninitsWhenTrueLeft = new Bits(uninitsWhenTrue);
+                    assignToInits(tree.lhs, initsWhenFalse);
+                    uninits.assign(uninitsWhenFalse);
+                    scanCond(tree.rhs);
+                    initsWhenTrue.andSet(initsWhenTrueLeft);
+                    uninitsWhenTrue.andSet(uninitsWhenTrueLeft);
+                    break;
+                default:
+                    scanExpr(tree.lhs);
+                    scanExpr(tree.rhs);
             }
         }
 
         public void visitIdent(JCIdent tree) {
             if (tree.sym.kind == VAR) {
-                checkInit(tree.pos(), (VarSymbol)tree.sym);
+                checkInit(tree.pos(), (VarSymbol) tree.sym);
                 referenced(tree.sym);
             }
         }
@@ -2343,15 +2399,16 @@ public class Flow {
             // Do nothing for TopLevel since each class is visited individually
         }
 
-    /**************************************************************************
-     * main method
-     *************************************************************************/
+        /**************************************************************************
+         * main method
+         *************************************************************************/
 
-        /** Perform definite assignment/unassignment analysis on a tree.
+        /**
+         * Perform definite assignment/unassignment analysis on a tree.
          */
         public void analyzeTree(Env<?> env) {
             analyzeTree(env, env.tree);
-         }
+        }
 
         public void analyzeTree(Env<?> env, JCTree tree) {
             try {
@@ -2360,7 +2417,7 @@ public class Flow {
                 if (vardecls == null)
                     vardecls = new JCVariableDecl[32];
                 else
-                    for (int i=0; i<vardecls.length; i++)
+                    for (int i = 0; i < vardecls.length; i++)
                         vardecls[i] = null;
                 firstadr = 0;
                 nextadr = 0;
@@ -2374,7 +2431,7 @@ public class Flow {
                 resetBits(inits, uninits, uninitsTry, initsWhenTrue,
                         initsWhenFalse, uninitsWhenTrue, uninitsWhenFalse);
                 if (vardecls != null) {
-                    for (int i=0; i<vardecls.length; i++)
+                    for (int i = 0; i < vardecls.length; i++)
                         vardecls[i] = null;
                 }
                 firstadr = 0;
@@ -2387,13 +2444,13 @@ public class Flow {
     }
 
     public static class AssignAnalyzer
-        extends AbstractAssignAnalyzer<AssignAnalyzer.AssignPendingExit> {
+            extends AbstractAssignAnalyzer<AssignAnalyzer.AssignPendingExit> {
 
         Log log;
         Lint lint;
 
         public static class AssignPendingExit
-            extends AbstractAssignAnalyzer.AbstractAssignPendingExit {
+                extends AbstractAssignAnalyzer.AbstractAssignPendingExit {
 
             public AssignPendingExit(JCTree tree, final Bits inits, final Bits uninits) {
                 super(tree, inits, uninits);
@@ -2408,11 +2465,12 @@ public class Flow {
 
         @Override
         protected AssignPendingExit createNewPendingExit(JCTree tree,
-            Bits inits, Bits uninits) {
+                                                         Bits inits, Bits uninits) {
             return new AssignPendingExit(tree, inits, uninits);
         }
 
-        /** Record an initialization of a trackable variable.
+        /**
+         * Record an initialization of a trackable variable.
          */
         @Override
         void letInit(DiagnosticPosition pos, VarSymbol sym) {
@@ -2426,15 +2484,13 @@ public class Flow {
                     } else {
                         uninit(sym);
                     }
-                }
-                else if ((sym.flags() & FINAL) != 0) {
+                } else if ((sym.flags() & FINAL) != 0) {
                     if ((sym.flags() & PARAMETER) != 0) {
                         if ((sym.flags() & UNION) != 0) { //multi-catch parameter
                             log.error(pos, "multicatch.parameter.may.not.be.assigned", sym);
-                        }
-                        else {
+                        } else {
                             log.error(pos, "final.parameter.may.not.be.assigned",
-                                  sym);
+                                    sym);
                         }
                     } else if (!uninits.isMember(sym.adr)) {
                         log.error(pos, flowKind.errKey, sym);
@@ -2451,8 +2507,8 @@ public class Flow {
         @Override
         void checkInit(DiagnosticPosition pos, VarSymbol sym, String errkey) {
             if ((sym.adr >= firstadr || sym.owner.kind != TYP) &&
-                trackable(sym) &&
-                !inits.isMember(sym.adr)) {
+                    trackable(sym) &&
+                    !inits.isMember(sym.adr)) {
                 log.error(pos, errkey, sym);
                 inits.incl(sym.adr);
             }
@@ -2460,7 +2516,7 @@ public class Flow {
 
         @Override
         void reportWarning(Lint.LintCategory lc, DiagnosticPosition pos,
-            String key, Object ... args) {
+                           String key, Object... args) {
             log.warning(lc, pos, key, args);
         }
 
@@ -2517,7 +2573,7 @@ public class Flow {
             } else {
                 Lint lintPrev = lint;
                 lint = lint.augment(tree.sym);
-                try{
+                try {
                     super.visitVarDef(tree);
                 } finally {
                     lint = lintPrev;
@@ -2558,7 +2614,7 @@ public class Flow {
                         }
                     case LAMBDA:
                         if ((sym.flags() & (EFFECTIVELY_FINAL | FINAL)) == 0) {
-                           reportEffectivelyFinalError(pos, sym);
+                            reportEffectivelyFinalError(pos, sym);
                         }
                 }
             }
@@ -2572,7 +2628,7 @@ public class Flow {
                 if (currentTree != null &&
                         sym.kind == VAR &&
                         sym.owner.kind == MTH &&
-                        ((VarSymbol)sym).pos < currentTree.getStartPosition()) {
+                        ((VarSymbol) sym).pos < currentTree.getStartPosition()) {
                     switch (currentTree.getTag()) {
                         case CLASSDEF:
                             if (!allowEffectivelyFinalInInnerClasses) {
@@ -2588,7 +2644,7 @@ public class Flow {
 
         void reportEffectivelyFinalError(DiagnosticPosition pos, Symbol sym) {
             String subKey = currentTree.hasTag(LAMBDA) ?
-                  "lambda"  : "inner.cls";
+                    "lambda" : "inner.cls";
             log.error(pos, "cant.ref.non.effectively.final.var", sym, diags.fragment(subKey));
         }
 
@@ -2598,12 +2654,11 @@ public class Flow {
                     sym);
         }
 
-    /*************************************************************************
-     * Visitor methods for statements and definitions
-     *************************************************************************/
+        /*************************************************************************
+         * Visitor methods for statements and definitions
+         *************************************************************************/
 
         /* ------------ Visitor methods for various sorts of trees -------------*/
-
         public void visitClassDef(JCClassDecl tree) {
             JCTree prevTree = currentTree;
             try {
@@ -2628,7 +2683,7 @@ public class Flow {
         @Override
         public void visitIdent(JCIdent tree) {
             if (tree.sym.kind == VAR) {
-                checkEffectivelyFinal(tree, (VarSymbol)tree.sym);
+                checkEffectivelyFinal(tree, (VarSymbol) tree.sym);
             }
         }
 
@@ -2649,8 +2704,10 @@ public class Flow {
 
         public void visitUnary(JCUnary tree) {
             switch (tree.getTag()) {
-                case PREINC: case POSTINC:
-                case PREDEC: case POSTDEC:
+                case PREINC:
+                case POSTINC:
+                case PREDEC:
+                case POSTDEC:
                     scan(tree.arg);
                     letInit(tree.arg);
                     break;
@@ -2663,15 +2720,17 @@ public class Flow {
             // Do nothing for TopLevel since each class is visited individually
         }
 
-    /**************************************************************************
-     * main method
-     *************************************************************************/
+        /**************************************************************************
+         * main method
+         *************************************************************************/
 
-        /** Perform definite assignment/unassignment analysis on a tree.
+        /**
+         * Perform definite assignment/unassignment analysis on a tree.
          */
         public void analyzeTree(Env<AttrContext> env, TreeMaker make) {
             analyzeTree(env, env.tree, make);
         }
+
         public void analyzeTree(Env<AttrContext> env, JCTree tree, TreeMaker make) {
             try {
                 attrEnv = env;

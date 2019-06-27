@@ -25,22 +25,6 @@
 
 package com.sun.tools.javac.main;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URL;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import javax.annotation.processing.Processor;
-import javax.tools.JavaFileManager;
-import javax.tools.JavaFileObject;
-
 import com.sun.source.util.JavacTask;
 import com.sun.source.util.Plugin;
 import com.sun.tools.doclint.DocLint;
@@ -52,34 +36,51 @@ import com.sun.tools.javac.jvm.Profile;
 import com.sun.tools.javac.jvm.Target;
 import com.sun.tools.javac.processing.AnnotationProcessingError;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
+import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.Log.PrefixKind;
-import com.sun.tools.javac.util.Log.WriterKind;
 import com.sun.tools.javac.util.ServiceLoader;
+import com.sun.tools.javac.util.Log.WriterKind;
+
+import javax.annotation.processing.Processor;
+import javax.tools.JavaFileManager;
+import javax.tools.JavaFileObject;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.URL;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.util.*;
+
 import static com.sun.tools.javac.main.Option.*;
 
-/** This class provides a command line interface to the javac compiler.
+/**
+ * This class provides a command line interface to the javac compiler.
  *
- *  <p><b>This is NOT part of any supported API.
- *  If you write code that depends on this, you do so at your own risk.
- *  This code and its internal interfaces are subject to change or
- *  deletion without notice.</b>
+ * <p><b>This is NOT part of any supported API.
+ * If you write code that depends on this, you do so at your own risk.
+ * This code and its internal interfaces are subject to change or
+ * deletion without notice.</b>
  */
 public class Main {
 
-    /** The name of the compiler, for use in diagnostics.
-     *
+    /**
+     * The name of the compiler, for use in diagnostics.
+     * <p>
      * 启动调用时默认为 javac
      */
     String ownName;
 
-    /** The writer to use for diagnostic output.
-     *
-     *  启动调用时默认为：new PrintWriter(System.err, true)
+    /**
+     * The writer to use for diagnostic output.
+     * <p>
+     * 启动调用时默认为：new PrintWriter(System.err, true)
      */
     PrintWriter out;
 
-    /** The log to use for diagnostic output.
+    /**
+     * The log to use for diagnostic output.
      */
     public Log log;
 
@@ -90,7 +91,8 @@ public class Main {
     boolean apiMode;
 
 
-    /** Result codes.
+    /**
+     * Result codes.
      */
     public enum Result {
         OK(0),        // Compilation completed with no errors.
@@ -171,18 +173,23 @@ public class Main {
         this.out = out;
     }
 
-    /** A table of all options that's passed to the JavaCompiler constructor.  */
+    /**
+     * A table of all options that's passed to the JavaCompiler constructor.
+     */
     private Options options = null;
 
-    /** The list of source files to process
+    /**
+     * The list of source files to process
      */
     public Set<File> filenames = null; // XXX sb protected
 
-    /** List of class files names passed on the command line
+    /**
+     * List of class files names passed on the command line
      */
     public ListBuffer<String> classnames = null; // XXX sb protected
 
-    /** Report a usage error.
+    /**
+     * Report a usage error.
      */
     void error(String key, Object... args) {
         if (apiMode) {
@@ -193,7 +200,8 @@ public class Main {
         log.printLines(PrefixKind.JAVAC, "msg.usage", ownName);
     }
 
-    /** Report a warning.
+    /**
+     * Report a warning.
      */
     void warning(String key, Object... args) {
         log.printRawLines(ownName + ": " + log.localize(PrefixKind.JAVAC, key, args));
@@ -217,9 +225,11 @@ public class Main {
         this.apiMode = apiMode;
     }
 
-    /** Process command line arguments: store all command line options
-     *  in `options' table and return all source filenames.
-     *  @param flags    The array of command line arguments.
+    /**
+     * Process command line arguments: store all command line options
+     * in `options' table and return all source filenames.
+     *
+     * @param flags The array of command line arguments.
      */
     public Collection<File> processArgs(String[] flags) { // XXX sb protected
         return processArgs(flags, null);
@@ -237,8 +247,8 @@ public class Main {
                 // quick hack to speed up file processing:
                 // if the option does not begin with '-', there is no need to check
                 // most of the compiler options.
-                int firstOptionToCheck = flag.charAt(0) == '-' ? 0 : recognizedOptions.length-1;
-                for (int j=firstOptionToCheck; j<recognizedOptions.length; j++) {
+                int firstOptionToCheck = flag.charAt(0) == '-' ? 0 : recognizedOptions.length - 1;
+                for (int j = firstOptionToCheck; j < recognizedOptions.length; j++) {
                     if (recognizedOptions[j].matches(flag)) {
                         option = recognizedOptions[j];
                         break;
@@ -282,12 +292,12 @@ public class Main {
 
         String sourceString = options.get(SOURCE);
         Source source = (sourceString != null)
-            ? Source.lookup(sourceString)
-            : Source.DEFAULT;
+                ? Source.lookup(sourceString)
+                : Source.DEFAULT;
         String targetString = options.get(TARGET);
         Target target = (targetString != null)
-            ? Target.lookup(targetString)
-            : Target.DEFAULT;
+                ? Target.lookup(targetString)
+                : Target.DEFAULT;
         // We don't check source/target consistency for CLDC, as J2ME
         // profiles are not aligned with J2SE targets; moreover, a
         // single CLDC target may have many profiles.  In addition,
@@ -339,25 +349,28 @@ public class Main {
 
         return filenames;
     }
-    // where
-        private boolean checkDirectory(Option option) {
-            String value = options.get(option);
-            if (value == null)
-                return true;
-            File file = new File(value);
-            if (!file.exists()) {
-                error("err.dir.not.found", value);
-                return false;
-            }
-            if (!file.isDirectory()) {
-                error("err.file.not.directory", value);
-                return false;
-            }
-            return true;
-        }
 
-    /** Programmatic interface for main function.
-     * @param args    The command line parameters.
+    // where
+    private boolean checkDirectory(Option option) {
+        String value = options.get(option);
+        if (value == null)
+            return true;
+        File file = new File(value);
+        if (!file.exists()) {
+            error("err.dir.not.found", value);
+            return false;
+        }
+        if (!file.isDirectory()) {
+            error("err.file.not.directory", value);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Programmatic interface for main function.
+     *
+     * @param args The command line parameters.
      */
     public Result compile(String[] args) {
         Context context = new Context();
@@ -365,7 +378,7 @@ public class Main {
         Result result = compile(args, context);
         if (fileManager instanceof JavacFileManager) {
             // A fresh context was created above, so jfm must be a JavacFileManager
-            ((JavacFileManager)fileManager).close();
+            ((JavacFileManager) fileManager).close();
         }
         return result;
     }
@@ -374,23 +387,23 @@ public class Main {
         return compile(args, context, List.<JavaFileObject>nil(), null);
     }
 
-    /** Programmatic interface for main function.
-     * @param args    The command line parameters.
+    /**
+     * Programmatic interface for main function.
+     *
+     * @param args The command line parameters.
      */
     public Result compile(String[] args,
-                       Context context,
-                       List<JavaFileObject> fileObjects,
-                       Iterable<? extends Processor> processors)
-    {
-        return compile(args,  null, context, fileObjects, processors);
+                          Context context,
+                          List<JavaFileObject> fileObjects,
+                          Iterable<? extends Processor> processors) {
+        return compile(args, null, context, fileObjects, processors);
     }
 
     public Result compile(String[] args,
                           String[] classNames,
                           Context context,
                           List<JavaFileObject> fileObjects,
-                          Iterable<? extends Processor> processors)
-    {
+                          Iterable<? extends Processor> processors) {
         context.put(Log.outKey, out);
         log = Log.instance(context);
 
@@ -422,9 +435,9 @@ public class Main {
                 } else if (files.isEmpty() && fileObjects.isEmpty() && classnames.isEmpty()) {
                     // it is allowed to compile nothing if just asking for help or version info
                     if (options.isSet(HELP)
-                        || options.isSet(X)
-                        || options.isSet(VERSION)
-                        || options.isSet(FULLVERSION))
+                            || options.isSet(X)
+                            || options.isSet(VERSION)
+                            || options.isSet(FULLVERSION))
                         return Result.OK;
                     if (JavaCompiler.explicitAnnotationProcessingRequested(options)) {
                         error("err.no.source.files.classes");
@@ -446,7 +459,7 @@ public class Main {
 
             // allow System property in following line as a Mustang legacy
             boolean batchMode = (options.isUnset("nonBatchMode")
-                        && System.getProperty("nonBatchMode") == null);
+                    && System.getProperty("nonBatchMode") == null);
             if (batchMode)
                 CacheFSInfo.preRegister(context);
 
@@ -458,14 +471,14 @@ public class Main {
                 ClassLoader cl = pEnv.getProcessorClassLoader();
                 ServiceLoader<Plugin> sl = ServiceLoader.load(Plugin.class, cl);
                 Set<List<String>> pluginsToCall = new LinkedHashSet<List<String>>();
-                for (String plugin: plugins.split("\\x00")) {
+                for (String plugin : plugins.split("\\x00")) {
                     pluginsToCall.add(List.from(plugin.split("\\s+")));
                 }
                 JavacTask task = null;
                 Iterator<Plugin> iter = sl.iterator();
                 while (iter.hasNext()) {
                     Plugin plugin = iter.next();
-                    for (List<String> p: pluginsToCall) {
+                    for (List<String> p : pluginsToCall) {
                         if (plugin.getName().equals(p.head)) {
                             pluginsToCall.remove(p);
                             try {
@@ -481,7 +494,7 @@ public class Main {
                         }
                     }
                 }
-                for (List<String> p: pluginsToCall) {
+                for (List<String> p : pluginsToCall) {
                     log.printLines(PrefixKind.JAVAC, "msg.plugin.not.found", p.head);
                 }
             }
@@ -496,7 +509,7 @@ public class Main {
                 if (xdoclint != null)
                     doclintOpts.add(DocLint.XMSGS_OPTION);
                 if (xdoclintCustom != null) {
-                    for (String s: xdoclintCustom.split("\\s+")) {
+                    for (String s : xdoclintCustom.split("\\s+")) {
                         if (s.isEmpty())
                             continue;
                         doclintOpts.add(s.replace(XDOCLINT_CUSTOM.text, DocLint.XMSGS_CUSTOM_PREFIX));
@@ -518,15 +531,15 @@ public class Main {
                 // add filenames to fileObjects
                 comp = JavaCompiler.instance(context);
                 List<JavaFileObject> otherFiles = List.nil();
-                JavacFileManager dfm = (JavacFileManager)fileManager;
+                JavacFileManager dfm = (JavacFileManager) fileManager;
                 for (JavaFileObject fo : dfm.getJavaFileObjectsFromFiles(files))
                     otherFiles = otherFiles.prepend(fo);
                 for (JavaFileObject fo : otherFiles)
                     fileObjects = fileObjects.prepend(fo);
             }
             comp.compile(fileObjects,
-                         classnames.toList(),
-                         processors);
+                    classnames.toList(),
+                    processors);
 
             if (log.expectDiagKeys != null) {
                 if (log.expectDiagKeys.isEmpty()) {
@@ -568,7 +581,7 @@ public class Main {
             // for buggy compiler error recovery by swallowing thrown
             // exceptions.
             if (comp == null || comp.errorCount() == 0 ||
-                options == null || options.isSet("dev"))
+                    options == null || options.isSet("dev"))
                 bugMessage(ex);
             return Result.ABNORMAL;
         } finally {
@@ -585,14 +598,16 @@ public class Main {
         return Result.OK;
     }
 
-    /** Print a message reporting an internal error.
+    /**
+     * Print a message reporting an internal error.
      */
     void bugMessage(Throwable ex) {
         log.printLines(PrefixKind.JAVAC, "msg.bug", JavaCompiler.version());
         ex.printStackTrace(log.getWriter(WriterKind.NOTICE));
     }
 
-    /** Print a message reporting a fatal error.
+    /**
+     * Print a message reporting a fatal error.
      */
     void feMessage(Throwable ex) {
         log.printRawLines(ex.getMessage());
@@ -601,21 +616,24 @@ public class Main {
         }
     }
 
-    /** Print a message reporting an input/output error.
+    /**
+     * Print a message reporting an input/output error.
      */
     void ioMessage(Throwable ex) {
         log.printLines(PrefixKind.JAVAC, "msg.io");
         ex.printStackTrace(log.getWriter(WriterKind.NOTICE));
     }
 
-    /** Print a message reporting an out-of-resources error.
+    /**
+     * Print a message reporting an out-of-resources error.
      */
     void resourceMessage(Throwable ex) {
         log.printLines(PrefixKind.JAVAC, "msg.resource");
         ex.printStackTrace(log.getWriter(WriterKind.NOTICE));
     }
 
-    /** Print a message reporting an uncaught exception from an
+    /**
+     * Print a message reporting an uncaught exception from an
      * annotation processor.
      */
     void apMessage(AnnotationProcessingError ex) {
@@ -623,7 +641,8 @@ public class Main {
         ex.getCause().printStackTrace(log.getWriter(WriterKind.NOTICE));
     }
 
-    /** Print a message reporting an uncaught exception from an
+    /**
+     * Print a message reporting an uncaught exception from an
      * annotation processor.
      */
     void pluginMessage(Throwable ex) {
@@ -631,7 +650,9 @@ public class Main {
         ex.printStackTrace(log.getWriter(WriterKind.NOTICE));
     }
 
-    /** Display the location and checksum of a class. */
+    /**
+     * Display the location and checksum of a class.
+     */
     void showClass(String className) {
         PrintWriter pw = log.getWriter(WriterKind.NOTICE);
         pw.println("javac: show class: " + className);
@@ -648,13 +669,15 @@ public class Main {
                 try {
                     byte[] buf = new byte[8192];
                     int n;
-                    do { n = in.read(buf); } while (n > 0);
+                    do {
+                        n = in.read(buf);
+                    } while (n > 0);
                     digest = md.digest();
                 } finally {
                     in.close();
                 }
                 StringBuilder sb = new StringBuilder();
-                for (byte b: digest)
+                for (byte b : digest)
                     sb.append(String.format("%02x", b));
                 pw.println("  " + algorithm + " checksum: " + sb);
             } catch (Exception e) {
@@ -697,7 +720,7 @@ public class Main {
 //    }
 
     public static final String javacBundleName =
-        "com.sun.tools.javac.resources.javac";
+            "com.sun.tools.javac.resources.javac";
 //
 //    private static JavacMessages messages;
 }
